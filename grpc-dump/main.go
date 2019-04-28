@@ -3,15 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/bradleyjkemp/grpc_tools/grpc_proxy"
+	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"net"
 	"os"
 )
 
 var (
-	port = flag.Int("port", 0, "Port to listen on")
-	certFile = flag.String("cert", "", "Certificate file to use for serving using TLS")
-	keyFile = flag.String("key", "", "Key file to use for serving using TLS")
+	port              = flag.Int("port", 0, "Port to listen on")
+	certFile          = flag.String("cert", "", "Certificate file to use for serving using TLS")
+	keyFile           = flag.String("key", "", "Key file to use for serving using TLS")
 	destinationServer = flag.String("destination", "", "Destination server to forward requests to")
 )
 
@@ -25,7 +25,7 @@ func main() {
 	}
 }
 
-func run() error{
+func run() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
 		return err
@@ -50,7 +50,6 @@ func run() error{
 	if *destinationServer != "" {
 		options = append(options, grpc_proxy.DestinationServer(*destinationServer))
 	}
-
 
 	proxy, err := grpc_proxy.New(options...)
 	if err != nil {

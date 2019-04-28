@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/bradleyjkemp/grpc-tools/pkg"
 	"google.golang.org/grpc"
 	"sync"
 )
@@ -9,18 +10,13 @@ import (
 type recordedServerStream struct {
 	sync.Mutex
 	grpc.ServerStream
-	events []streamEvent
-}
-
-type streamEvent struct {
-	ServerMessage []byte `json:"server_message,omitempty"`
-	ClientMessage []byte `json:"client_message,omitempty"`
+	events []pkg.StreamEvent
 }
 
 func (ss *recordedServerStream) SendMsg(m interface{}) error {
 	message := m.([]byte)
 	ss.Lock()
-	ss.events = append(ss.events, streamEvent{ServerMessage: message})
+	ss.events = append(ss.events, pkg.StreamEvent{ServerMessage: message})
 	ss.Unlock()
 	return ss.ServerStream.SendMsg(m)
 }
@@ -33,7 +29,7 @@ func (ss *recordedServerStream) RecvMsg(m interface{}) error {
 	// now m is populated
 	message := m.(*[]byte)
 	ss.Lock()
-	ss.events = append(ss.events, streamEvent{ClientMessage: *message})
+	ss.events = append(ss.events, pkg.StreamEvent{ClientMessage: *message})
 	ss.Unlock()
 	return nil
 }

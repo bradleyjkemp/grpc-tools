@@ -1,16 +1,16 @@
 package pkg
 
 import (
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 type RPC struct {
-	Service  string         `json:"service"`
-	Method   string         `json:"method"`
-	Messages []StreamEvent  `json:"messages"`
-	Status   *status.Status `json:"error"`
-	Metadata metadata.MD    `json:"metadata"`
+	Service  string        `json:"service"`
+	Method   string        `json:"method"`
+	Messages []StreamEvent `json:"messages"`
+	Status   *spb.Status   `json:"error"`
+	Metadata metadata.MD   `json:"metadata"`
 }
 
 type StreamEvent struct {

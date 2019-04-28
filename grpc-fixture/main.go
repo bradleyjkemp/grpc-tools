@@ -70,11 +70,13 @@ func loadFixture() (*fixtureInterceptor, error) {
 
 	dumpDecoder := json.NewDecoder(dumpFile)
 	interceptor := &fixtureInterceptor{
-		allRecordedMethods: map[string][][]pkg.StreamEvent{},
-		unaryMethods:       map[string]map[string]string{},
+		// map of method to list of RPCs
+		allRecordedMethods: map[string][]pkg.RPC{},
+		// map of method and request to RPC response for that request
+		unaryMethods: map[string]map[string]pkg.RPC{},
 	}
-	rpc := pkg.RPC{}
 	for {
+		rpc := pkg.RPC{}
 		err := dumpDecoder.Decode(&rpc)
 		if err == io.EOF {
 			break
@@ -84,22 +86,40 @@ func loadFixture() (*fixtureInterceptor, error) {
 		}
 
 		key := rpc.Service + "/" + rpc.Method
-		interceptor.allRecordedMethods[key] = append(interceptor.allRecordedMethods[key], rpc.Messages)
+		interceptor.allRecordedMethods[key] = append(interceptor.allRecordedMethods[key], rpc)
 	}
 
 	for method, calls := range interceptor.allRecordedMethods {
 		isUnary := true
-		for _, messages := range calls {
-			// exactly two messages: client request and server response
-			isUnary = isUnary &&
-				(len(messages) == 2 &&
+		for _, request := range calls {
+			messages := request.Messages
+			if len(messages) > 2 {
+				isUnary = false
+				break
+			}
+
+			if len(messages) == 2 {
+				// exactly two messages: client request and server response
+				isUnary = isUnary &&
 					messages[0].ClientMessage != nil && messages[0].ServerMessage == nil &&
-					messages[1].ClientMessage == nil && messages[1].ServerMessage != nil)
+					messages[1].ClientMessage == nil && messages[1].ServerMessage != nil
+			}
+
+			if len(messages) == 1 {
+				// exactly one message: client request (and server responded with an error)
+				isUnary = isUnary &&
+					messages[0].ClientMessage != nil && messages[0].ServerMessage == nil
+			}
+
 		}
 		if isUnary {
 			// all requests looked unary so can add a shortcut
 			for _, request := range calls {
-				interceptor.unaryMethods[method][string(request[0].ClientMessage)] = string(request[1].ServerMessage)
+				if interceptor.unaryMethods[method] == nil {
+					interceptor.unaryMethods[method] = map[string]pkg.RPC{}
+				}
+
+				interceptor.unaryMethods[method][string(request.Messages[0].ClientMessage)] = request
 			}
 		}
 	}

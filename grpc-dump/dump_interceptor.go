@@ -23,7 +23,7 @@ func dumpInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamSer
 		Service:  fullMethod[1],
 		Method:   fullMethod[2],
 		Messages: dss.events,
-		Status:   rpcStatus,
+		Status:   rpcStatus.Proto(),
 	}
 
 	dump, _ := json.Marshal(rpc)

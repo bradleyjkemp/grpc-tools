@@ -93,22 +93,19 @@ func loadFixture() (*fixtureInterceptor, error) {
 		isUnary := true
 		for _, request := range calls {
 			messages := request.Messages
-			if len(messages) > 2 {
-				isUnary = false
-				break
-			}
-
-			if len(messages) == 2 {
-				// exactly two messages: client request and server response
-				isUnary = isUnary &&
-					messages[0].RawMessage != nil && messages[0].ServerMessage == nil &&
-					messages[1].RawMessage == nil && messages[1].ServerMessage != nil
-			}
-
-			if len(messages) == 1 {
+			switch len(messages) {
+			case 1:
 				// exactly one message: client request (and server responded with an error)
 				isUnary = isUnary &&
-					messages[0].RawMessage != nil && messages[0].ServerMessage == nil
+					messages[0].MessageOrigin == internal.ClientMessage
+			case 2:
+				// exactly two messages: client request and server response
+				isUnary = isUnary &&
+					messages[0].MessageOrigin == internal.ClientMessage &&
+					messages[1].MessageOrigin == internal.ServerMessage
+			default:
+				isUnary = false
+				break
 			}
 
 		}

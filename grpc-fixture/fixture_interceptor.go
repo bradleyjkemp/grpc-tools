@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
-	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/davecgh/go-spew/spew"
 	"google.golang.org/grpc"
@@ -42,7 +40,6 @@ func (f *fixtureInterceptor) intercept(srv interface{}, ss grpc.ServerStream, in
 
 	response, ok := f.unaryMethods[key][string(receivedMessage)]
 	if !ok {
-		fmt.Println("huhg?", base64.StdEncoding.EncodeToString(receivedMessage))
 		return status.Errorf(codes.Unavailable, "no matching saved response for request %s", string(receivedMessage))
 	}
 	if response.Status.GetCode() != 0 {

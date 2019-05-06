@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"io"
+	"os"
 )
 
 func (s *server) proxyHandler(srv interface{}, serverStream grpc.ServerStream) error {
@@ -47,7 +48,7 @@ func (s *server) proxyHandler(srv interface{}, serverStream grpc.ServerStream) e
 				// to cancel the clientStream to the backend, let all of its goroutines be freed up by the CancelFunc and
 				// exit with an error to the stack
 				clientCancel()
-				fmt.Println("failed proxying s2c", s2cErr)
+				fmt.Fprintln(os.Stderr, "failed proxying s2c", s2cErr)
 				return grpc.Errorf(codes.Internal, "failed proxying s2c: %v", s2cErr)
 			}
 		case c2sErr := <-c2sErrChan:

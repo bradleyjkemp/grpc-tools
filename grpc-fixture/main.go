@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
-	"github.com/bradleyjkemp/grpc-tools/pkg"
+	"github.com/bradleyjkemp/grpc-tools/internal"
 	"io"
 	"net"
 	"os"
@@ -71,12 +71,12 @@ func loadFixture() (*fixtureInterceptor, error) {
 	dumpDecoder := json.NewDecoder(dumpFile)
 	interceptor := &fixtureInterceptor{
 		// map of method to list of RPCs
-		allRecordedMethods: map[string][]pkg.RPC{},
+		allRecordedMethods: map[string][]internal.RPC{},
 		// map of method and request to RPC response for that request
-		unaryMethods: map[string]map[string]pkg.RPC{},
+		unaryMethods: map[string]map[string]internal.RPC{},
 	}
 	for {
-		rpc := pkg.RPC{}
+		rpc := internal.RPC{}
 		err := dumpDecoder.Decode(&rpc)
 		if err == io.EOF {
 			break
@@ -101,14 +101,14 @@ func loadFixture() (*fixtureInterceptor, error) {
 			if len(messages) == 2 {
 				// exactly two messages: client request and server response
 				isUnary = isUnary &&
-					messages[0].ClientMessage != nil && messages[0].ServerMessage == nil &&
-					messages[1].ClientMessage == nil && messages[1].ServerMessage != nil
+					messages[0].RawMessage != nil && messages[0].ServerMessage == nil &&
+					messages[1].RawMessage == nil && messages[1].ServerMessage != nil
 			}
 
 			if len(messages) == 1 {
 				// exactly one message: client request (and server responded with an error)
 				isUnary = isUnary &&
-					messages[0].ClientMessage != nil && messages[0].ServerMessage == nil
+					messages[0].RawMessage != nil && messages[0].ServerMessage == nil
 			}
 
 		}
@@ -116,10 +116,10 @@ func loadFixture() (*fixtureInterceptor, error) {
 			// all requests looked unary so can add a shortcut
 			for _, request := range calls {
 				if interceptor.unaryMethods[method] == nil {
-					interceptor.unaryMethods[method] = map[string]pkg.RPC{}
+					interceptor.unaryMethods[method] = map[string]internal.RPC{}
 				}
 
-				interceptor.unaryMethods[method][string(request.Messages[0].ClientMessage)] = request
+				interceptor.unaryMethods[method][string(request.Messages[0].RawMessage)] = request
 			}
 		}
 	}

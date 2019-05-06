@@ -4,8 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
+	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/jhump/protoreflect/desc"
 	"net"
 	"os"
+	"strings"
 )
 
 var (
@@ -13,6 +16,7 @@ var (
 	certFile          = flag.String("cert", "", "Certificate file to use for serving using TLS")
 	keyFile           = flag.String("key", "", "Key file to use for serving using TLS")
 	destinationServer = flag.String("destination", "", "Destination server to forward requests to")
+	protoRoots        = flag.String("proto_roots", "", "A comma separated list of directories to search for gRPC service definitions")
 )
 
 func main() {
@@ -25,18 +29,31 @@ func main() {
 	}
 }
 
+//[]string{
+//"/Users/bradleykemp/repos/platform/proto",
+//"/Users/bradleykemp/go/src/github.com/googleapis/googleapis",
+//"/Users/bradleykemp/go/src/",
+//}...
+
 func run() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
 		return err
 	}
-	if *port == 0 {
-		// port was auto-selected so need to tell the user
-		fmt.Fprintf(os.Stderr, "listening on %s\n", lis.Addr())
+
+	var knownMethods map[string]*desc.MethodDescriptor
+	if *protoRoots != "" {
+		descs, err := internal.LoadServiceDescriptors(strings.Split(*protoRoots, ",")...)
+		if err != nil {
+			return err
+		} else {
+			fmt.Fprintln(os.Stderr, "Loaded", len(descs), "service descriptors")
+			knownMethods = descs
+		}
 	}
 
 	options := []grpc_proxy.Configurator{
-		grpc_proxy.WithInterceptor(dumpInterceptor),
+		grpc_proxy.WithInterceptor(dumpInterceptor(knownMethods)),
 	}
 
 	if *certFile != "" || *keyFile != "" {
@@ -56,5 +73,6 @@ func run() error {
 		return err
 	}
 
+	fmt.Fprintf(os.Stderr, "Listening on %s\n", lis.Addr())
 	return proxy.Serve(lis)
 }

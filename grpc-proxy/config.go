@@ -15,7 +15,7 @@ func DestinationServer(target string, dialOptions ...grpc.DialOption) Configurat
 		dialOptions = append(
 			dialOptions,
 			grpc.WithTransportCredentials(credentials.NewTLS(nil)),
-			grpc.WithDefaultCallOptions(grpc.ForceCodec(noopCodec{})),
+			grpc.WithDefaultCallOptions(grpc.ForceCodec(NoopCodec{})),
 		)
 		var err error
 		s.destination, err = grpc.DialContext(ctx, target, dialOptions...)
@@ -33,7 +33,7 @@ func WithOptions(options ...grpc.ServerOption) Configurator {
 }
 
 func WithInterceptor(interceptor grpc.StreamServerInterceptor) Configurator {
-	return func (s *server) {
+	return func(s *server) {
 		s.interceptor = interceptor
 	}
 }

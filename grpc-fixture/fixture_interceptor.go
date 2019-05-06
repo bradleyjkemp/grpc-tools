@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/bradleyjkemp/grpc-tools/pkg"
+	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/davecgh/go-spew/spew"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -12,10 +12,10 @@ import (
 )
 
 type fixtureInterceptor struct {
-	allRecordedMethods map[string][]pkg.RPC
+	allRecordedMethods map[string][]internal.RPC
 
 	// map of unary request method's request->responses
-	unaryMethods map[string]map[string]pkg.RPC
+	unaryMethods map[string]map[string]internal.RPC
 }
 
 // fixtureInterceptor implements a gRPC.StreamingServerInterceptor that replays saved responses
@@ -49,5 +49,5 @@ func (f *fixtureInterceptor) intercept(srv interface{}, ss grpc.ServerStream, in
 		return status.FromProto(response.Status).Err()
 	}
 
-	return ss.SendMsg([]byte(response.Messages[1].ServerMessage))
+	return ss.SendMsg([]byte(response.Messages[1].RawMessage))
 }

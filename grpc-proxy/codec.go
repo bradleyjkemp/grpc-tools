@@ -2,23 +2,23 @@ package grpc_proxy
 
 import "google.golang.org/grpc"
 
-type noopCodec struct {
+type NoopCodec struct {
 	upstream grpc.ClientConn
 }
 
-func (noopCodec) Marshal(v interface{}) ([]byte, error) {
+func (NoopCodec) Marshal(v interface{}) ([]byte, error) {
 	return v.([]byte), nil
 }
 
-func (noopCodec) Unmarshal(data []byte, v interface{}) error {
+func (NoopCodec) Unmarshal(data []byte, v interface{}) error {
 	*(v.(*[]byte)) = data
 	return nil
 }
 
-func (noopCodec) Name() string {
+func (NoopCodec) Name() string {
 	return "proxy-proto"
 }
 
-func (noopCodec) String() string {
+func (NoopCodec) String() string {
 	return "proxy-proto"
 }

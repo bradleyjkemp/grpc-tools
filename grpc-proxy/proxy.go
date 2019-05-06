@@ -18,10 +18,10 @@ type Server interface{}
 type server struct {
 	err              error // filled if any errors occur during startup
 	destinationCreds credentials.TransportCredentials
-	serverOptions []grpc.ServerOption
+	serverOptions    []grpc.ServerOption
 	grpcServer       *grpc.Server
 	destination      *grpc.ClientConn
-	interceptor grpc.StreamServerInterceptor
+	interceptor      grpc.StreamServerInterceptor
 	certFile         string
 	keyFile          string
 	grpcWeb          bool
@@ -38,7 +38,7 @@ func New(configurators ...Configurator) (*server, error) {
 	}
 
 	serverOptions := append(s.serverOptions,
-		grpc.CustomCodec(noopCodec{}),
+		grpc.CustomCodec(NoopCodec{}),
 		grpc.UnknownServiceHandler(s.proxyHandler))
 
 	if s.interceptor != nil {

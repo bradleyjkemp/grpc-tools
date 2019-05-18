@@ -18,13 +18,18 @@ var proxyStreamDesc = &grpc.StreamDesc{
 	ClientStreams: true,
 }
 
-type Server interface{}
+type readWriteCloser interface {
+	io.ReadWriter
+	CloseRead() error
+	CloseWrite() error
+}
 
 type server struct {
 	err              error // filled if any errors occur during startup
 	destinationCreds credentials.TransportCredentials
 	serverOptions    []grpc.ServerOption
 	grpcServer       *grpc.Server
+	httpServer       *http.Server
 	destination      *grpc.ClientConn
 	interceptor      grpc.StreamServerInterceptor
 	certFile         string
@@ -68,6 +73,7 @@ func (s *server) Serve(listener net.Listener) error {
 	httpServer := &http.Server{}
 
 	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("got req", r.Method, r.Host, r.URL)
 		if r.Method == http.MethodConnect {
 			destConn, err := net.DialTimeout(listener.Addr().Network(), listener.Addr().String(), 10*time.Second)
 			if err != nil {
@@ -87,8 +93,8 @@ func (s *server) Serve(listener net.Listener) error {
 			}
 			clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
 
-			clientTCP := clientConn.(*net.TCPConn)
-			destTCP := destConn.(*net.TCPConn)
+			clientTCP := clientConn.(readWriteCloser)
+			destTCP := destConn.(readWriteCloser)
 			go func() {
 				io.Copy(destTCP, clientTCP)
 				destTCP.CloseWrite()
@@ -104,12 +110,14 @@ func (s *server) Serve(listener net.Listener) error {
 		}
 	})
 
+	httpLis, httpsLis := newHttpHttpsMux(listener)
+
 	if s.certFile != "" && s.keyFile != "" {
-		return httpServer.ServeTLS(listener, s.certFile, s.keyFile)
+		go httpServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
 	}
 
 	// Unencrypted HTTP2 is not supported by default so need this wrapper
 	// This accepts PRI methods and does the necessary upgrade
 	httpServer.Handler = h2c.NewHandler(httpServer.Handler, &http2.Server{})
-	return httpServer.Serve(listener)
+	return httpServer.Serve(httpLis)
 }

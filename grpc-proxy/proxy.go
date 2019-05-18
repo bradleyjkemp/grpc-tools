@@ -1,11 +1,16 @@
 package grpc_proxy
 
 import (
+	"fmt"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"io"
 	"net"
 	"net/http"
+	"time"
 )
 
 var proxyStreamDesc = &grpc.StreamDesc{
@@ -60,13 +65,51 @@ func (s *server) Serve(listener net.Listener) error {
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false), // because we are proxying
 	)
 
-	httpServer := http.Server{
-		Handler: http.HandlerFunc(wrappedProxy.ServeHTTP),
-	}
+	httpServer := &http.Server{}
+
+	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodConnect {
+			destConn, err := net.DialTimeout(listener.Addr().Network(), listener.Addr().String(), 10*time.Second)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusServiceUnavailable)
+				return
+			}
+
+			hijacker, ok := w.(http.Hijacker)
+			if !ok {
+				http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
+				return
+			}
+			clientConn, _, err := hijacker.Hijack()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusServiceUnavailable)
+				return
+			}
+			clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
+
+			clientTCP := clientConn.(*net.TCPConn)
+			destTCP := destConn.(*net.TCPConn)
+			go func() {
+				io.Copy(destTCP, clientTCP)
+				destTCP.CloseWrite()
+				clientTCP.CloseRead()
+			}()
+			go func() {
+				io.Copy(clientTCP, destTCP)
+				clientTCP.CloseWrite()
+				destTCP.CloseRead()
+			}()
+		} else {
+			wrappedProxy.ServeHTTP(w, r)
+		}
+	})
 
 	if s.certFile != "" && s.keyFile != "" {
 		return httpServer.ServeTLS(listener, s.certFile, s.keyFile)
 	}
 
+	// Unencrypted HTTP2 is not supported by default so need this wrapper
+	// This accepts PRI methods and does the necessary upgrade
+	httpServer.Handler = h2c.NewHandler(httpServer.Handler, &http2.Server{})
 	return httpServer.Serve(listener)
 }

@@ -2,7 +2,6 @@ package grpc_proxy
 
 import (
 	"bufio"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -23,10 +22,8 @@ type chanListener struct {
 }
 
 func (c *chanListener) Accept() (net.Conn, error) {
-	fmt.Println("Accept called")
 	select {
 	case conn := <-c.conns:
-		fmt.Println("got conn from channel", conn)
 		return conn, nil
 	case err := <-c.errs:
 		return nil, err
@@ -62,7 +59,6 @@ func newHttpHttpsMux(listener net.Listener) (net.Listener, net.Listener) {
 	go func() {
 		for {
 			conn, err := listener.Accept()
-			fmt.Println("got conn", conn, conn.RemoteAddr(), err)
 			if err != nil {
 				httpErr <- err
 				httpsErr <- err
@@ -71,24 +67,20 @@ func newHttpHttpsMux(listener net.Listener) (net.Listener, net.Listener) {
 
 			peeker := bufio.NewReaderSize(conn, peekSize)
 			peek, err := peeker.Peek(peekSize)
-			fmt.Println("got peek", hex.EncodeToString(peek), err)
 			if err != nil {
 				httpErr <- err
 				httpsErr <- err
 			}
 			if httpsPattern.Match(peek) {
-				fmt.Println("matches https")
 				httpsCon <- bufferConn{
 					reader:  peeker,
 					TCPConn: conn.(*net.TCPConn),
 				}
 			} else {
-				fmt.Println("falling back to http")
 				httpCon <- bufferConn{
 					reader:  peeker,
 					TCPConn: conn.(*net.TCPConn),
 				}
-				fmt.Println("sent on channel")
 			}
 		}
 	}()

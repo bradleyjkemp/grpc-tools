@@ -11,20 +11,39 @@ import (
 	"os"
 )
 
-func (s *server) proxyHandler(srv interface{}, serverStream grpc.ServerStream) error {
-	if s.destination == nil {
-		// no destination configured so just error
+// copied from github.com/mwitkow/grpc-proxy/proxy/handler.go with adaptations
+func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
+	md, ok := metadata.FromIncomingContext(ss.Context())
+	if !ok {
+		return status.Error(codes.Unknown, "could not extract metadata from request")
+	}
+
+	authority := md.Get(":authority")
+	var destination *grpc.ClientConn
+	switch {
+	case len(authority) > 0:
+		// use authority from request
+		var err error
+		destination, err = s.connPool.getClientConn(ss.Context(), authority[0])
+		if err != nil {
+			return err
+		}
+	case s.destination != nil:
+		// fallback to hardcoded destination (used by clients not supporting HTTP proxies)
+		destination = s.destination
+	default:
+		// no destination can be determined so just error
 		return status.Error(codes.Unimplemented, "no proxy destination configured")
 	}
 
 	// little bit of gRPC internals never hurt anyone
-	fullMethodName, ok := grpc.MethodFromServerStream(serverStream)
+	fullMethodName, ok := grpc.MethodFromServerStream(ss)
 	if !ok {
 		return status.Errorf(codes.Internal, "no method exists in context")
 	}
 
-	clientCtx, clientCancel := getClientCtx(serverStream.Context())
-	clientStream, err := s.destination.NewStream(clientCtx, proxyStreamDesc, fullMethodName)
+	clientCtx, clientCancel := getClientCtx(ss.Context())
+	clientStream, err := destination.NewStream(clientCtx, proxyStreamDesc, fullMethodName)
 	if err != nil {
 		return err
 	}
@@ -32,8 +51,8 @@ func (s *server) proxyHandler(srv interface{}, serverStream grpc.ServerStream) e
 	// Explicitly *do not close* s2cErrChan and c2sErrChan, otherwise the select below will not terminate.
 	// Channels do not have to be closed, it is just a control flow mechanism, see
 	// https://groups.google.com/forum/#!msg/golang-nuts/pZwdYRGxCIk/qpbHxRRPJdUJ
-	s2cErrChan := forwardServerToClient(serverStream, clientStream)
-	c2sErrChan := forwardClientToServer(clientStream, serverStream)
+	s2cErrChan := forwardServerToClient(ss, clientStream)
+	c2sErrChan := forwardClientToServer(clientStream, ss)
 	// We don't know which side is going to stop sending first, so we need a select between the two.
 	for i := 0; i < 2; i++ {
 		select {
@@ -55,7 +74,7 @@ func (s *server) proxyHandler(srv interface{}, serverStream grpc.ServerStream) e
 			// This happens when the clientStream has nothing else to offer (io.EOF), returned a gRPC error. In those two
 			// cases we may have received Trailers as part of the call. In case of other errors (stream closed) the trailers
 			// will be nil.
-			serverStream.SetTrailer(clientStream.Trailer())
+			ss.SetTrailer(clientStream.Trailer())
 			// c2sErr will contain RPC error from client code. If not io.EOF return the RPC error as server stream error.
 			if c2sErr != io.EOF {
 				return c2sErr

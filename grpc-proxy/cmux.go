@@ -44,6 +44,7 @@ func (c *cmuxListener) Addr() net.Addr {
 type cmuxConn struct {
 	reader io.Reader
 	net.Conn
+	tls bool
 }
 
 func (c cmuxConn) Read(b []byte) (n int, err error) {
@@ -74,11 +75,13 @@ func newHttpHttpsMux(listener net.Listener) (net.Listener, net.Listener) {
 				httpsCon <- cmuxConn{
 					reader: peeker,
 					Conn:   conn,
+					tls:    true,
 				}
 			} else {
 				httpCon <- cmuxConn{
 					reader: peeker,
 					Conn:   conn,
+					tls:    false,
 				}
 			}
 		}

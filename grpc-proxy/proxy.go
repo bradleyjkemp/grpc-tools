@@ -27,12 +27,17 @@ type server struct {
 	keyFile      string
 
 	destination *grpc.ClientConn
+	connPool    *connPool
+
 	interceptor grpc.StreamServerInterceptor
 }
 
 func New(configurators ...Configurator) (*server, error) {
 	s := &server{
 		proxiedConns: make(chan *proxiedConn),
+		connPool: &connPool{
+			conns: map[string]*grpc.ClientConn{},
+		},
 	}
 	for _, configurator := range configurators {
 		configurator(s)

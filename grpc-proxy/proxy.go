@@ -48,8 +48,9 @@ func New(configurators ...Configurator) (*server, error) {
 	}
 
 	serverOptions := append(s.serverOptions,
-		grpc.CustomCodec(NoopCodec{}),
-		grpc.UnknownServiceHandler(s.proxyHandler))
+		grpc.CustomCodec(NoopCodec{}),              // Allows for passing raw []byte messages around
+		grpc.UnknownServiceHandler(s.proxyHandler), // All services are unknown so will be proxied
+	)
 
 	if s.interceptor != nil {
 		serverOptions = append(serverOptions, grpc.StreamInterceptor(s.interceptor))
@@ -98,10 +99,12 @@ func (s *server) handleConnect(w http.ResponseWriter, r *http.Request) {
 	s.proxiedConns <- &proxiedConn{clientConn, r.Host}
 }
 
-func (s *server) newHttpServer(wrappedProxy *grpcweb.WrappedGrpcServer, listensOnSSL bool) *http.Server {
+const tlsStatusHeaderKey = "grpc-proxy-was-tls-request"
+
+func (s *server) newHttpServer(wrappedProxy *grpcweb.WrappedGrpcServer, listensOnTLS bool) *http.Server {
 	httpReverseProxy := &httputil.ReverseProxy{
 		Director: func(request *http.Request) {
-			if listensOnSSL {
+			if request.Header.Get(tlsStatusHeaderKey) != "" {
 				request.URL.Scheme = "https"
 			} else {
 				request.URL.Scheme = "http"
@@ -114,7 +117,9 @@ func (s *server) newHttpServer(wrappedProxy *grpcweb.WrappedGrpcServer, listensO
 	}
 	return &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r.Context()
+			if listensOnTLS {
+				r.Header.Set(tlsStatusHeaderKey, "true")
+			}
 			switch {
 			case r.Method == http.MethodConnect:
 				s.handleConnect(w, r)

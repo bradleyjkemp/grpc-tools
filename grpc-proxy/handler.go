@@ -24,7 +24,7 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	case len(authority) > 0:
 		// use authority from request
 		var err error
-		destination, err = s.connPool.getClientConn(ss.Context(), authority[0])
+		destination, err = s.connPool.getClientConn(ss.Context(), authority[0], len(md.Get(tlsStatusHeaderKey)) > 0)
 		if err != nil {
 			return err
 		}

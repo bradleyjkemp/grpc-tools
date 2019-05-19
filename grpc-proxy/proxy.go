@@ -5,13 +5,10 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"strings"
-	"time"
 )
 
 var proxyStreamDesc = &grpc.StreamDesc{
@@ -19,28 +16,24 @@ var proxyStreamDesc = &grpc.StreamDesc{
 	ClientStreams: true,
 }
 
-type readWriteCloser interface {
-	io.ReadWriter
-	CloseRead() error
-	CloseWrite() error
-}
-
 type server struct {
-	err              error // filled if any errors occur during startup
-	destinationCreds credentials.TransportCredentials
-	serverOptions    []grpc.ServerOption
-	grpcServer       *grpc.Server
-	httpServer       *http.Server
-	listener         net.Listener
-	destination      *grpc.ClientConn
-	interceptor      grpc.StreamServerInterceptor
-	certFile         string
-	keyFile          string
-	grpcWeb          bool
+	err           error // filled if any errors occur during startup
+	serverOptions []grpc.ServerOption
+
+	grpcServer   *grpc.Server
+	httpServer   *http.Server
+	proxiedConns chan *proxiedConn
+	certFile     string
+	keyFile      string
+
+	destination *grpc.ClientConn
+	interceptor grpc.StreamServerInterceptor
 }
 
 func New(configurators ...Configurator) (*server, error) {
-	s := &server{}
+	s := &server{
+		proxiedConns: make(chan *proxiedConn),
+	}
 	for _, configurator := range configurators {
 		configurator(s)
 	}
@@ -57,18 +50,12 @@ func New(configurators ...Configurator) (*server, error) {
 		serverOptions = append(serverOptions, grpc.StreamInterceptor(s.interceptor))
 	}
 
-	if s.destinationCreds != nil {
-		serverOptions = append(serverOptions, grpc.Creds(s.destinationCreds))
-	}
-
 	s.grpcServer = grpc.NewServer(serverOptions...)
 
 	return s, nil
 }
 
 func (s *server) Serve(listener net.Listener) error {
-	s.listener = listener
-
 	wrappedProxy := grpcweb.WrapServer(
 		s.grpcServer,
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false), // because we are proxying
@@ -76,7 +63,10 @@ func (s *server) Serve(listener net.Listener) error {
 	httpServer := s.newHttpServer(wrappedProxy, false)
 	httpsServer := s.newHttpServer(wrappedProxy, true)
 
-	httpLis, httpsLis := newHttpHttpsMux(listener)
+	httpLis, httpsLis := newHttpHttpsMux(&proxyListener{
+		channel:  s.proxiedConns,
+		Listener: listener,
+	})
 
 	if s.certFile != "" && s.keyFile != "" {
 		go httpsServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
@@ -89,12 +79,6 @@ func (s *server) Serve(listener net.Listener) error {
 }
 
 func (s *server) handleConnect(w http.ResponseWriter, r *http.Request) {
-	destConn, err := net.DialTimeout(s.listener.Addr().Network(), s.listener.Addr().String(), 10*time.Second)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
-		return
-	}
-
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
@@ -106,19 +90,7 @@ func (s *server) handleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
-
-	clientTCP := clientConn.(readWriteCloser)
-	destTCP := destConn.(readWriteCloser)
-	go func() {
-		io.Copy(destTCP, clientTCP)
-		destTCP.CloseWrite()
-		clientTCP.CloseRead()
-	}()
-	go func() {
-		io.Copy(clientTCP, destTCP)
-		clientTCP.CloseWrite()
-		destTCP.CloseRead()
-	}()
+	s.proxiedConns <- &proxiedConn{clientConn, r.Host}
 }
 
 func (s *server) newHttpServer(wrappedProxy *grpcweb.WrappedGrpcServer, listensOnSSL bool) *http.Server {

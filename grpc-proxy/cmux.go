@@ -2,7 +2,6 @@ package grpc_proxy
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"net"
 	"regexp"
@@ -10,18 +9,18 @@ import (
 )
 
 var (
-	httpsPattern = regexp.MustCompile(`^\x16\x03[\00-\x03]`) // TLS handshake byte + version number
-	peekSize     = 8
+	tlsPattern = regexp.MustCompile(`^\x16\x03[\00-\x03]`) // TLS handshake byte + version number
+	peekSize   = 3
 )
 
-type chanListener struct {
+type cmuxListener struct {
 	parent net.Listener
 	close  *sync.Once
 	conns  <-chan net.Conn
 	errs   <-chan error
 }
 
-func (c *chanListener) Accept() (net.Conn, error) {
+func (c *cmuxListener) Accept() (net.Conn, error) {
 	select {
 	case conn := <-c.conns:
 		return conn, nil
@@ -30,7 +29,7 @@ func (c *chanListener) Accept() (net.Conn, error) {
 	}
 }
 
-func (c *chanListener) Close() error {
+func (c *cmuxListener) Close() error {
 	var err error
 	c.close.Do(func() {
 		err = c.parent.Close()
@@ -38,16 +37,16 @@ func (c *chanListener) Close() error {
 	return err
 }
 
-func (c *chanListener) Addr() net.Addr {
+func (c *cmuxListener) Addr() net.Addr {
 	return c.parent.Addr()
 }
 
-type bufferConn struct {
+type cmuxConn struct {
 	reader io.Reader
-	*net.TCPConn
+	net.Conn
 }
 
-func (c bufferConn) Read(b []byte) (n int, err error) {
+func (c cmuxConn) Read(b []byte) (n int, err error) {
 	return c.reader.Read(b)
 }
 
@@ -71,25 +70,25 @@ func newHttpHttpsMux(listener net.Listener) (net.Listener, net.Listener) {
 				httpErr <- err
 				httpsErr <- err
 			}
-			if httpsPattern.Match(peek) {
-				httpsCon <- bufferConn{
-					reader:  peeker,
-					TCPConn: conn.(*net.TCPConn),
+			if tlsPattern.Match(peek) {
+				httpsCon <- cmuxConn{
+					reader: peeker,
+					Conn:   conn,
 				}
 			} else {
-				httpCon <- bufferConn{
-					reader:  peeker,
-					TCPConn: conn.(*net.TCPConn),
+				httpCon <- cmuxConn{
+					reader: peeker,
+					Conn:   conn,
 				}
 			}
 		}
 	}()
 	closer := &sync.Once{}
-	return &chanListener{
+	return &cmuxListener{
 			parent: listener,
 			close:  closer,
 			conns:  httpCon,
-		}, &chanListener{
+		}, &cmuxListener{
 			parent: listener,
 			close:  closer,
 			conns:  httpsCon,

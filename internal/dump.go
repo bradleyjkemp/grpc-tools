@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/metadata"
 )
@@ -13,15 +14,19 @@ type RPC struct {
 	Metadata metadata.MD    `json:"metadata"`
 }
 
-type messageOrigin string
+func (r RPC) StreamName() string {
+	return fmt.Sprintf("/%s/%s", r.Service, r.Method)
+}
+
+type MessageOrigin string
 
 const (
-	ClientMessage messageOrigin = "client"
-	ServerMessage messageOrigin = "server"
+	ClientMessage MessageOrigin = "client"
+	ServerMessage MessageOrigin = "server"
 )
 
 type StreamEvent struct {
-	MessageOrigin messageOrigin `json:"message_origin,omitempty"`
+	MessageOrigin MessageOrigin `json:"message_origin,omitempty"`
 	RawMessage    []byte        `json:"raw_message,omitempty"`
 	Message       interface{}   `json:"message,omitempty"`
 }

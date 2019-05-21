@@ -54,7 +54,7 @@ RPC:
 			return fmt.Errorf("failed to connect to destination (%s): %s", *destinationOverride, err)
 		}
 		ctx := metadata.NewOutgoingContext(context.Background(), rpc.Metadata)
-		streamName := fmt.Sprintf("/%s/%s", rpc.Service, rpc.Method)
+		streamName := rpc.StreamName()
 		str, err := conn.NewStream(ctx, &grpc.StreamDesc{
 			StreamName:    streamName,
 			ServerStreams: true,

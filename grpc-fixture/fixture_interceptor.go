@@ -2,49 +2,61 @@ package main
 
 import (
 	"github.com/bradleyjkemp/grpc-tools/internal"
-	"github.com/davecgh/go-spew/spew"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"strings"
 )
 
-type fixtureInterceptor struct {
-	allRecordedMethods map[string][]internal.RPC
-
-	// map of unary request method's request->responses
-	unaryMethods map[string]map[string]internal.RPC
-}
-
 // fixtureInterceptor implements a gRPC.StreamingServerInterceptor that replays saved responses
-func (f *fixtureInterceptor) intercept(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, _ grpc.StreamHandler) error {
-	fullMethod := strings.Split(info.FullMethod, "/")
-	key := fullMethod[1] + "/" + fullMethod[2]
+func (f fixture) intercept(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, _ grpc.StreamHandler) error {
+	messageTreeNode := f[info.FullMethod]
 
-	if len(f.allRecordedMethods[key]) == 0 {
-		return status.Error(codes.Unavailable, "no saved responses found for method")
-	}
-
-	if len(f.unaryMethods[key]) == 0 {
-		return status.Error(codes.Unimplemented, "non-unary methods not yet implemented")
+	if messageTreeNode == nil {
+		return status.Error(codes.Unavailable, "no saved responses found for method "+info.FullMethod)
 	}
 
-	var receivedMessage []byte
-	err := ss.RecvMsg(&receivedMessage)
-	if err != nil {
-		return err
-	}
-	for mapkey, _ := range f.unaryMethods[key] {
-		spew.Dump(mapkey)
-	}
+	for {
+		// posibility that server sends the first method
+		serverFirst := len(messageTreeNode.nextMessages) > 0
+		for _, message := range messageTreeNode.nextMessages {
+			serverFirst = serverFirst && message.origin == internal.ServerMessage
+		}
 
-	response, ok := f.unaryMethods[key][string(receivedMessage)]
-	if !ok {
-		return status.Errorf(codes.Unavailable, "no matching saved response for request %s", string(receivedMessage))
-	}
-	if response.Status.GetCode() != 0 {
-		return status.FromProto(response.Status).Err()
-	}
+		if serverFirst {
+			for _, message := range messageTreeNode.nextMessages {
+				if message.origin == internal.ServerMessage {
+					err := ss.SendMsg([]byte(message.raw))
+					if err != nil {
+						return err
+					}
 
-	return ss.SendMsg([]byte(response.Messages[1].RawMessage))
+					// recurse deeper into the tree
+					messageTreeNode = message
+
+					// found the first server message so break
+					break
+				}
+			}
+		} else {
+			// wait for a client message and then proceed based on its contents
+			var receivedMessage []byte
+			err := ss.RecvMsg(&receivedMessage)
+			if err != nil {
+				return err
+			}
+			for _, message := range messageTreeNode.nextMessages {
+				if message.origin == internal.ClientMessage && message.raw == string(receivedMessage) {
+					// found the matching message so recurse deeper into the tree
+					messageTreeNode = message
+
+					break
+				}
+			}
+		}
+
+		if len(messageTreeNode.nextMessages) == 0 {
+			// end of the exchange
+			return nil
+		}
+	}
 }

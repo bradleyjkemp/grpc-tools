@@ -3,8 +3,10 @@ package grpc_proxy
 import (
 	"context"
 	"fmt"
+	"github.com/bradleyjkemp/grpc-tools/internal/tls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"io"
@@ -24,7 +26,17 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	case len(authority) > 0:
 		// use authority from request
 		var err error
-		destination, err = s.connPool.getClientConn(ss.Context(), authority[0], len(md.Get(tlsStatusHeaderKey)) > 0)
+		options := []grpc.DialOption{
+			grpc.WithDefaultCallOptions(grpc.ForceCodec(NoopCodec{})),
+			grpc.WithBlock(),
+		}
+
+		if tls.IsTLSRPC(md) {
+			options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
+		} else {
+			options = append(options, grpc.WithInsecure())
+		}
+		destination, err = s.connPool.GetClientConn(ss.Context(), authority[0], options...)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,8 @@
 package grpc_proxy
 
 import (
+	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/tls"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -27,7 +29,7 @@ type server struct {
 	keyFile      string
 
 	destination *grpc.ClientConn
-	connPool    *connPool
+	connPool    *internal.ConnPool
 
 	interceptor grpc.StreamServerInterceptor
 }
@@ -35,9 +37,7 @@ type server struct {
 func New(configurators ...Configurator) (*server, error) {
 	s := &server{
 		proxiedConns: make(chan *proxiedConn),
-		connPool: &connPool{
-			conns: map[string]*grpc.ClientConn{},
-		},
+		connPool:     internal.NewConnPool(),
 	}
 	for _, configurator := range configurators {
 		configurator(s)
@@ -99,12 +99,10 @@ func (s *server) handleConnect(w http.ResponseWriter, r *http.Request) {
 	s.proxiedConns <- &proxiedConn{clientConn, r.Host}
 }
 
-const tlsStatusHeaderKey = "grpc-proxy-was-tls-request"
-
 func (s *server) newHttpServer(wrappedProxy *grpcweb.WrappedGrpcServer, listensOnTLS bool) *http.Server {
 	httpReverseProxy := &httputil.ReverseProxy{
 		Director: func(request *http.Request) {
-			if request.Header.Get(tlsStatusHeaderKey) != "" {
+			if tls.IsTLSRequest(request.Header) {
 				request.URL.Scheme = "https"
 			} else {
 				request.URL.Scheme = "http"
@@ -118,7 +116,7 @@ func (s *server) newHttpServer(wrappedProxy *grpcweb.WrappedGrpcServer, listensO
 	return &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if listensOnTLS {
-				r.Header.Set(tlsStatusHeaderKey, "true")
+				tls.AddHTTPSMarker(r.Header)
 			}
 			switch {
 			case r.Method == http.MethodConnect:

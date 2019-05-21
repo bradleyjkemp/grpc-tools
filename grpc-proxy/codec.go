@@ -1,10 +1,6 @@
 package grpc_proxy
 
-import "google.golang.org/grpc"
-
-type NoopCodec struct {
-	upstream grpc.ClientConn
-}
+type NoopCodec struct{}
 
 func (NoopCodec) Marshal(v interface{}) ([]byte, error) {
 	return v.([]byte), nil

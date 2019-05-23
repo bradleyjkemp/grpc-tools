@@ -1,6 +1,8 @@
 package grpc_proxy
 
 import (
+	crypto_tls "crypto/tls"
+	"crypto/x509"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/tls"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
@@ -69,13 +71,31 @@ func (s *server) Serve(listener net.Listener) error {
 	httpServer := s.newHttpServer(wrappedProxy, false)
 	httpsServer := s.newHttpServer(wrappedProxy, true)
 
+	var x509Cert *x509.Certificate
+	if s.certFile != "" && s.keyFile != "" {
+		tlsCert, err := crypto_tls.LoadX509KeyPair(s.certFile, s.keyFile)
+		if err != nil {
+			return err
+		}
+		httpsServer.TLSConfig = &crypto_tls.Config{
+			Certificates: []crypto_tls.Certificate{
+				tlsCert,
+			},
+		}
+		x509Cert, err = x509.ParseCertificate(tlsCert.Certificate[0]) //TODO do we need to parse anything other than [0]?
+		if err != nil {
+			return err
+		}
+	}
+
 	httpLis, httpsLis := newHttpHttpsMux(&proxyListener{
 		channel:  s.proxiedConns,
 		Listener: listener,
-	})
+	}, x509Cert)
 
 	if s.certFile != "" && s.keyFile != "" {
-		go httpsServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
+		// already loaded and configured certs above so no need to specify again
+		go httpsServer.ServeTLS(httpsLis, "", "")
 	}
 
 	// Unencrypted HTTP2 is not supported by default so need this wrapper

@@ -2,9 +2,13 @@ package grpc_proxy
 
 import (
 	"bufio"
+	"crypto/x509"
+	"fmt"
 	"io"
 	"net"
+	"os"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -51,7 +55,7 @@ func (c cmuxConn) Read(b []byte) (n int, err error) {
 	return c.reader.Read(b)
 }
 
-func newHttpHttpsMux(listener net.Listener) (net.Listener, net.Listener) {
+func newHttpHttpsMux(listener net.Listener, cert *x509.Certificate) (net.Listener, net.Listener) {
 	var httpCon = make(chan net.Conn, 1)
 	var httpErr = make(chan error, 1)
 	var httpsCon = make(chan net.Conn, 1)
@@ -72,6 +76,25 @@ func newHttpHttpsMux(listener net.Listener) (net.Listener, net.Listener) {
 				httpsErr <- err
 			}
 			if tlsPattern.Match(peek) {
+				if cert == nil {
+					// TODO: don't kill the connection here: proxy it without interception to the real host
+					fmt.Println("Err: received tls connection but no certificate set up")
+					conn.Close()
+					continue
+				}
+
+				if proxConn, ok := conn.(*proxiedConn); ok {
+					// trim the port suffix
+					originalHostname := strings.Split(proxConn.originalDestination, ":")[0]
+					if cert.VerifyHostname(originalHostname) != nil {
+						fmt.Fprintln(os.Stderr, "Err: do not have a certificate that can serve", originalHostname)
+						// TODO: don't kill the connection here: proxy it without interception to the real host
+						proxConn.Close()
+						continue
+					}
+				}
+
+				// either this was a direct connection or we're proxying for a hostname we can intercept
 				httpsCon <- cmuxConn{
 					reader: peeker,
 					Conn:   conn,

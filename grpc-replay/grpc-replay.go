@@ -53,6 +53,11 @@ RPC:
 		if err != nil {
 			return fmt.Errorf("failed to connect to destination (%s): %s", *destinationOverride, err)
 		}
+
+		// RPC has metadata added by grpc-dump that should be removed before sending
+		// (so that we're sending as close as possible to the original request)
+		tls.RemoveHTTPSMarker(rpc.Metadata)
+
 		ctx := metadata.NewOutgoingContext(context.Background(), rpc.Metadata)
 		streamName := rpc.StreamName()
 		str, err := conn.NewStream(ctx, &grpc.StreamDesc{

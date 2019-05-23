@@ -19,7 +19,10 @@ func dumpInterceptor(knownMethods map[string]*desc.MethodDescriptor) grpc.Stream
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		dss := &recordedServerStream{ServerStream: ss}
 		err := handler(srv, dss)
-		rpcStatus, _ := status.FromError(err)
+		var rpcStatus *status.Status
+		if err != nil {
+			rpcStatus, _ = status.FromError(err)
+		}
 
 		fullMethod := strings.Split(info.FullMethod, "/")
 		md, _ := metadata.FromIncomingContext(ss.Context())

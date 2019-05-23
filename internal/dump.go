@@ -10,7 +10,7 @@ type RPC struct {
 	Service  string         `json:"service"`
 	Method   string         `json:"method"`
 	Messages []*StreamEvent `json:"messages"`
-	Status   *spb.Status    `json:"error"`
+	Status   *spb.Status    `json:"error,omitempty"`
 	Metadata metadata.MD    `json:"metadata"`
 }
 

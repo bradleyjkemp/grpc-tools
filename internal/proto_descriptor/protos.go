@@ -1,4 +1,4 @@
-package internal
+package proto_descriptor
 
 import (
 	"fmt"
@@ -8,13 +8,27 @@ import (
 	"path/filepath"
 )
 
+func LoadProtoDescriptors(descriptorPaths ...string) (map[string]*desc.MethodDescriptor, error) {
+	descriptors := []*desc.FileDescriptor{}
+	for _, path := range descriptorPaths {
+		descriptor, err := desc.LoadFileDescriptor(path)
+		if err != nil {
+			return nil, err
+		}
+		descriptors = append(descriptors, descriptor)
+	}
+
+	return convertDescriptorsToMap(descriptors), nil
+}
+
 // recursively walks through all files in the given directories and
 // finds .proto files that contains service definitions
-func LoadServiceDescriptors(roots ...string) (map[string]*desc.MethodDescriptor, error) {
+func LoadProtoDirectories(roots ...string) (map[string]*desc.MethodDescriptor, error) {
 	var servicesFiles []*desc.FileDescriptor
 
 	parser := protoparse.Parser{
-		ImportPaths: roots,
+		ImportPaths:      roots,
+		InferImportPaths: true, // attempt to be clever
 	}
 
 	// scan all roots for .proto files containing gRPC service definitions

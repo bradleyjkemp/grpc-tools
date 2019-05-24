@@ -3,6 +3,7 @@ package grpc_proxy
 import (
 	crypto_tls "crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/tls"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
@@ -26,7 +27,7 @@ type server struct {
 
 	grpcServer   *grpc.Server
 	httpServer   *http.Server
-	proxiedConns chan *proxiedConn
+	proxiedConns chan *proxiedConn // TODO: properly scope this to only where it's used
 	certFile     string
 	keyFile      string
 
@@ -64,6 +65,12 @@ func New(configurators ...Configurator) (*server, error) {
 }
 
 func (s *server) Serve(listener net.Listener) error {
+	var tcpListener *net.TCPListener
+	var ok bool
+	if tcpListener, ok = listener.(*net.TCPListener); !ok {
+		return fmt.Errorf("can only listen on a TCP listener")
+	}
+
 	wrappedProxy := grpcweb.WrapServer(
 		s.grpcServer,
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false), // because we are proxying
@@ -71,7 +78,11 @@ func (s *server) Serve(listener net.Listener) error {
 	httpServer := s.newHttpServer(wrappedProxy, false)
 	httpsServer := s.newHttpServer(wrappedProxy, true)
 
-	var x509Cert *x509.Certificate
+	var httpLis net.Listener = &proxyListener{
+		channel:     s.proxiedConns,
+		TCPListener: tcpListener,
+	}
+
 	if s.certFile != "" && s.keyFile != "" {
 		tlsCert, err := crypto_tls.LoadX509KeyPair(s.certFile, s.keyFile)
 		if err != nil {
@@ -82,18 +93,19 @@ func (s *server) Serve(listener net.Listener) error {
 				tlsCert,
 			},
 		}
-		x509Cert, err = x509.ParseCertificate(tlsCert.Certificate[0]) //TODO do we need to parse anything other than [0]?
+		x509Cert, err := x509.ParseCertificate(tlsCert.Certificate[0]) //TODO do we need to parse anything other than [0]?
 		if err != nil {
 			return err
 		}
-	}
 
-	httpLis, httpsLis := newHttpHttpsMux(&proxyListener{
-		channel:  s.proxiedConns,
-		Listener: listener,
-	}, x509Cert)
+		var httpsLis net.Listener
+		// TODO: we should use a simple form of this mux even if no cert is specified
+		// that way all HTTPS conns will be proxied transparently
+		httpLis, httpsLis = newHttpHttpsMux(&proxyListener{
+			channel:     s.proxiedConns,
+			TCPListener: tcpListener,
+		}, x509Cert)
 
-	if s.certFile != "" && s.keyFile != "" {
 		// already loaded and configured certs above so no need to specify again
 		go httpsServer.ServeTLS(httpsLis, "", "")
 	}
@@ -116,7 +128,17 @@ func (s *server) handleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
-	s.proxiedConns <- &proxiedConn{clientConn, r.Host}
+	var bidiConn bidirectionalConn
+	switch conn := clientConn.(type) {
+	case *net.TCPConn:
+		bidiConn = conn
+	case cmuxConn:
+		bidiConn = conn
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	s.proxiedConns <- &proxiedConn{bidiConn, r.Host}
 }
 
 func (s *server) newHttpServer(wrappedProxy *grpcweb.WrappedGrpcServer, listensOnTLS bool) *http.Server {

@@ -5,8 +5,14 @@ import (
 	"sync"
 )
 
-type proxiedConn struct {
+type bidirectionalConn interface {
 	net.Conn
+	CloseRead() error
+	CloseWrite() error
+}
+
+type proxiedConn struct {
+	bidirectionalConn
 	originalDestination string
 }
 
@@ -15,7 +21,7 @@ type proxiedConn struct {
 type proxyListener struct {
 	channel chan *proxiedConn
 	errs    chan error
-	net.Listener
+	*net.TCPListener
 	once sync.Once
 }
 
@@ -25,14 +31,14 @@ func (l *proxyListener) Accept() (net.Conn, error) {
 		go func() {
 			l.errs = make(chan error)
 			for {
-				conn, err := l.Listener.Accept()
+				conn, err := l.TCPListener.AcceptTCP()
 				if err != nil {
 					l.errs <- err
 					continue
 				}
 				l.channel <- &proxiedConn{
-					Conn:                conn,
-					originalDestination: l.Listener.Addr().String(),
+					bidirectionalConn:   conn,
+					originalDestination: l.TCPListener.Addr().String(),
 				}
 			}
 		}()

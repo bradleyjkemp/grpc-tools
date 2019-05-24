@@ -47,7 +47,7 @@ func (c *cmuxListener) Addr() net.Addr {
 
 type cmuxConn struct {
 	reader io.Reader
-	net.Conn
+	bidirectionalConn
 	tls bool
 }
 
@@ -55,57 +55,30 @@ func (c cmuxConn) Read(b []byte) (n int, err error) {
 	return c.reader.Read(b)
 }
 
-func newHttpHttpsMux(listener net.Listener, cert *x509.Certificate) (net.Listener, net.Listener) {
-	var httpCon = make(chan net.Conn, 1)
-	var httpErr = make(chan error, 1)
-	var httpsCon = make(chan net.Conn, 1)
-	var httpsErr = make(chan error, 1)
+func newHttpHttpsMux(listener net.Listener, cert *x509.Certificate) (httpLis net.Listener, httpsLis net.Listener) {
+	var nonTlsConns = make(chan net.Conn, 1)
+	var nonTlsErrs = make(chan error, 1)
+	var tlsConns = make(chan net.Conn, 1)
+	var tlsErrs = make(chan error, 1)
 	go func() {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				httpErr <- err
-				httpsErr <- err
+				nonTlsErrs <- err
+				tlsErrs <- err
 				continue
 			}
 
 			peeker := bufio.NewReaderSize(conn, peekSize)
 			peek, err := peeker.Peek(peekSize)
 			if err != nil {
-				httpErr <- err
-				httpsErr <- err
+				nonTlsErrs <- err
+				tlsErrs <- err
 			}
 			if tlsPattern.Match(peek) {
-				if cert == nil {
-					// TODO: don't kill the connection here: proxy it without interception to the real host
-					fmt.Println("Err: received tls connection but no certificate set up")
-					conn.Close()
-					continue
-				}
-
-				if proxConn, ok := conn.(*proxiedConn); ok {
-					// trim the port suffix
-					originalHostname := strings.Split(proxConn.originalDestination, ":")[0]
-					if cert.VerifyHostname(originalHostname) != nil {
-						fmt.Fprintln(os.Stderr, "Err: do not have a certificate that can serve", originalHostname)
-						// TODO: don't kill the connection here: proxy it without interception to the real host
-						proxConn.Close()
-						continue
-					}
-				}
-
-				// either this was a direct connection or we're proxying for a hostname we can intercept
-				httpsCon <- cmuxConn{
-					reader: peeker,
-					Conn:   conn,
-					tls:    true,
-				}
+				handleTlsConn(conn, peeker, cert, tlsConns)
 			} else {
-				httpCon <- cmuxConn{
-					reader: peeker,
-					Conn:   conn,
-					tls:    false,
-				}
+				handleNonTlsConn(conn, peeker, nonTlsConns)
 			}
 		}
 	}()
@@ -113,10 +86,67 @@ func newHttpHttpsMux(listener net.Listener, cert *x509.Certificate) (net.Listene
 	return &cmuxListener{
 			parent: listener,
 			close:  closer,
-			conns:  httpCon,
+			conns:  nonTlsConns,
 		}, &cmuxListener{
 			parent: listener,
 			close:  closer,
-			conns:  httpsCon,
+			conns:  tlsConns,
 		}
+}
+
+func handleTlsConn(conn net.Conn, r io.Reader, cert *x509.Certificate, httpsConns chan net.Conn) {
+	switch connType := conn.(type) {
+	case *proxiedConn:
+		// trim the port suffix
+		originalHostname := strings.Split(connType.originalDestination, ":")[0]
+		if cert.VerifyHostname(originalHostname) == nil {
+			// the certificate we have allows us to intercept this connection
+			httpsConns <- cmuxConn{
+				reader:            r,
+				bidirectionalConn: connType,
+				tls:               true,
+			}
+		} else {
+			// cannot intercept so will just transparently proxy instead
+			fmt.Fprintln(os.Stderr, "Err: do not have a certificate that can serve", originalHostname)
+			err := forwardConnection(&proxiedConn{
+				cmuxConn{ // TODO: this is pretty messed up but required because of the peeking that has already occurred
+					reader:            r,
+					bidirectionalConn: connType,
+					tls:               true,
+				},
+				connType.originalDestination,
+			})
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Err: error proxying to", originalHostname, err)
+			}
+		}
+
+	case *net.TCPConn:
+		// either this was a direct connection or we're proxying for a hostname we can intercept
+		httpsConns <- cmuxConn{
+			reader:            r,
+			bidirectionalConn: connType,
+			tls:               true,
+		}
+
+	default:
+		fmt.Fprintln(os.Stderr, "Err: unknown connection type", connType)
+		conn.Close()
+	}
+}
+
+func handleNonTlsConn(conn net.Conn, r io.Reader, httpConns chan net.Conn) {
+	switch bidiConn := conn.(type) {
+	case bidirectionalConn:
+		httpConns <- cmuxConn{
+			reader:            r,
+			bidirectionalConn: bidiConn,
+			tls:               false,
+		}
+	default:
+		fmt.Fprintln(os.Stderr, "Err: unknown connection type", bidiConn)
+		conn.Close()
+	}
+
 }

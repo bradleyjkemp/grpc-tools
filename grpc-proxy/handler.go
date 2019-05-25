@@ -13,7 +13,7 @@ import (
 	"os"
 )
 
-// copied from github.com/mwitkow/grpc-proxy/proxy/handler.go with adaptations
+// Originally based on github.com/mwitkow/grpc-proxy/proxy/handler.go
 func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	md, ok := metadata.FromIncomingContext(ss.Context())
 	if !ok {
@@ -21,31 +21,32 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	}
 
 	authority := md.Get(":authority")
-	var destination *grpc.ClientConn
+	var destinationAddr string
 	switch {
 	case len(authority) > 0:
 		// use authority from request
-		var err error
-		options := []grpc.DialOption{
-			grpc.WithDefaultCallOptions(grpc.ForceCodec(NoopCodec{})),
-			grpc.WithBlock(),
-		}
-
-		if tls.IsTLSRPC(md) {
-			options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
-		} else {
-			options = append(options, grpc.WithInsecure())
-		}
-		destination, err = s.connPool.GetClientConn(ss.Context(), authority[0], options...)
-		if err != nil {
-			return err
-		}
-	case s.destination != nil:
+		destinationAddr = authority[0]
+	case s.destination != "":
 		// fallback to hardcoded destination (used by clients not supporting HTTP proxies)
-		destination = s.destination
+		destinationAddr = s.destination
 	default:
 		// no destination can be determined so just error
 		return status.Error(codes.Unimplemented, "no proxy destination configured")
+	}
+
+	options := []grpc.DialOption{
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(NoopCodec{})),
+		grpc.WithBlock(),
+	}
+	if tls.IsTLSRPC(md) {
+		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
+	} else {
+		options = append(options, grpc.WithInsecure())
+	}
+
+	destination, err := s.connPool.GetClientConn(ss.Context(), destinationAddr, options...)
+	if err != nil {
+		return err
 	}
 
 	// little bit of gRPC internals never hurt anyone

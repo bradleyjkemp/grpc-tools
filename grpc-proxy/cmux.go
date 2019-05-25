@@ -99,7 +99,7 @@ func handleTlsConn(conn net.Conn, r io.Reader, cert *x509.Certificate, httpsConn
 	case *proxiedConn:
 		// trim the port suffix
 		originalHostname := strings.Split(connType.originalDestination, ":")[0]
-		if cert.VerifyHostname(originalHostname) == nil {
+		if cert != nil && cert.VerifyHostname(originalHostname) == nil {
 			// the certificate we have allows us to intercept this connection
 			httpsConns <- cmuxConn{
 				reader:            r,

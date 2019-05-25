@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"strings"
 )
 
@@ -22,19 +23,19 @@ var proxyStreamDesc = &grpc.StreamDesc{
 }
 
 type server struct {
-	err           error // filled if any errors occur during startup
 	serverOptions []grpc.ServerOption
 
 	grpcServer   *grpc.Server
-	httpServer   *http.Server
 	proxiedConns chan *proxiedConn // TODO: properly scope this to only where it's used
-	certFile     string
-	keyFile      string
 
-	destination *grpc.ClientConn
+	port     int
+	certFile string
+	keyFile  string
+
+	destination string
 	connPool    *internal.ConnPool
 
-	interceptor grpc.StreamServerInterceptor
+	listener net.Listener
 }
 
 func New(configurators ...Configurator) (*server, error) {
@@ -42,73 +43,55 @@ func New(configurators ...Configurator) (*server, error) {
 		proxiedConns: make(chan *proxiedConn),
 		connPool:     internal.NewConnPool(),
 	}
+	s.serverOptions = []grpc.ServerOption{
+		grpc.CustomCodec(NoopCodec{}),              // Allows for passing raw []byte messages around
+		grpc.UnknownServiceHandler(s.proxyHandler), // All services are unknown so will be proxied
+	}
+
 	for _, configurator := range configurators {
 		configurator(s)
 	}
 
-	if s.err != nil {
-		return nil, s.err
-	}
-
-	serverOptions := append(s.serverOptions,
-		grpc.CustomCodec(NoopCodec{}),              // Allows for passing raw []byte messages around
-		grpc.UnknownServiceHandler(s.proxyHandler), // All services are unknown so will be proxied
-	)
-
-	if s.interceptor != nil {
-		serverOptions = append(serverOptions, grpc.StreamInterceptor(s.interceptor))
-	}
-
-	s.grpcServer = grpc.NewServer(serverOptions...)
-
 	return s, nil
 }
 
-func (s *server) Serve(listener net.Listener) error {
-	var tcpListener *net.TCPListener
-	var ok bool
-	if tcpListener, ok = listener.(*net.TCPListener); !ok {
+func (s *server) Start() error {
+	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", s.port))
+	if err != nil {
+		return fmt.Errorf("failed to listen on port (%d): %v", s.port, err)
+	}
+	if _, ok := listener.(*net.TCPListener); !ok {
 		return fmt.Errorf("can only listen on a TCP listener")
+	}
+	fmt.Fprintf(os.Stderr, "Listening on %s\n", listener.Addr()) // TODO move this to a logger controllable by options
+	proxyLis := &proxyListener{
+		channel:     s.proxiedConns,
+		TCPListener: listener.(*net.TCPListener),
 	}
 
 	wrappedProxy := grpcweb.WrapServer(
-		s.grpcServer,
+		grpc.NewServer(s.serverOptions...),
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false), // because we are proxying
 	)
 	httpServer := s.newHttpServer(wrappedProxy, false)
 	httpsServer := s.newHttpServer(wrappedProxy, true)
 
-	var httpLis net.Listener = &proxyListener{
-		channel:     s.proxiedConns,
-		TCPListener: tcpListener,
-	}
-
+	var x509Cert *x509.Certificate
 	if s.certFile != "" && s.keyFile != "" {
+		// TODO: load this as part of New()
 		tlsCert, err := crypto_tls.LoadX509KeyPair(s.certFile, s.keyFile)
 		if err != nil {
 			return err
 		}
-		httpsServer.TLSConfig = &crypto_tls.Config{
-			Certificates: []crypto_tls.Certificate{
-				tlsCert,
-			},
-		}
-		x509Cert, err := x509.ParseCertificate(tlsCert.Certificate[0]) //TODO do we need to parse anything other than [0]?
+
+		x509Cert, err = x509.ParseCertificate(tlsCert.Certificate[0]) //TODO do we need to parse anything other than [0]?
 		if err != nil {
 			return err
 		}
-
-		var httpsLis net.Listener
-		// TODO: we should use a simple form of this mux even if no cert is specified
-		// that way all HTTPS conns will be proxied transparently
-		httpLis, httpsLis = newHttpHttpsMux(&proxyListener{
-			channel:     s.proxiedConns,
-			TCPListener: tcpListener,
-		}, x509Cert)
-
-		// already loaded and configured certs above so no need to specify again
-		go httpsServer.ServeTLS(httpsLis, "", "")
 	}
+
+	httpLis, httpsLis := newHttpHttpsMux(proxyLis, x509Cert)
+	go httpsServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
 
 	// Unencrypted HTTP2 is not supported by default so need this wrapper
 	// This accepts PRI methods and does the necessary upgrade

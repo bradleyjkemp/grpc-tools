@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"github.com/bradleyjkemp/grpc-tools/internal"
-	"github.com/bradleyjkemp/grpc-tools/internal/tls"
+	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -56,7 +56,7 @@ RPC:
 
 		// RPC has metadata added by grpc-dump that should be removed before sending
 		// (so that we're sending as close as possible to the original request)
-		tls.RemoveHTTPSMarker(rpc.Metadata)
+		marker.RemoveHTTPSMarker(rpc.Metadata)
 
 		ctx := metadata.NewOutgoingContext(context.Background(), rpc.Metadata)
 		streamName := rpc.StreamName()
@@ -115,7 +115,7 @@ func getConnection(md metadata.MD) (*grpc.ClientConn, error) {
 		grpc.WithBlock(),
 	}
 
-	if tls.IsTLSRPC(md) {
+	if marker.IsTLSRPC(md) {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
 	} else {
 		options = append(options, grpc.WithInsecure())

@@ -101,7 +101,7 @@ func newTlsMux(listener net.Listener, cert *x509.Certificate) (nonTls net.Listen
 
 func handleTlsConn(conn net.Conn, r io.Reader, cert *x509.Certificate, tlsConns chan net.Conn) {
 	switch connType := conn.(type) {
-	case *proxiedConn:
+	case proxiedConn:
 		// trim the port suffix
 		originalHostname := strings.Split(connType.originalDestination, ":")[0]
 		if cert != nil && cert.VerifyHostname(originalHostname) == nil {
@@ -114,7 +114,7 @@ func handleTlsConn(conn net.Conn, r io.Reader, cert *x509.Certificate, tlsConns 
 		} else {
 			// cannot intercept so will just transparently proxy instead
 			fmt.Fprintln(os.Stderr, "Err: do not have a certificate that can serve", originalHostname)
-			err := forwardConnection(&proxiedConn{
+			err := forwardConnection(proxiedConn{
 				tlsMuxConn{ // TODO: this is pretty messed up but required because of the peeking that has already occurred
 					reader:            r,
 					bidirectionalConn: connType,

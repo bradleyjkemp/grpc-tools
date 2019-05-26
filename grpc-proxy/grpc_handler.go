@@ -3,7 +3,7 @@ package grpc_proxy
 import (
 	"context"
 	"fmt"
-	"github.com/bradleyjkemp/grpc-tools/internal/tls"
+	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -43,7 +43,7 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(NoopCodec{})),
 		grpc.WithBlock(),
 	}
-	if tls.IsTLSRPC(md) {
+	if marker.IsTLSRPC(md) {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
 	} else {
 		options = append(options, grpc.WithInsecure())

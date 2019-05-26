@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func forwardConnection(proxConn *proxiedConn) error {
+func forwardConnection(proxConn proxiedConn) error {
 	destinationConn, err := net.Dial(proxConn.LocalAddr().Network(), proxConn.originalDestination)
 	if err != nil {
 		return err

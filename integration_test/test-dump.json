@@ -4,11 +4,11 @@
   "messages": [
     {
       "message_origin": "client",
-      "raw_message": "Q2xpZW50UmVxdWVzdA=="
+      "raw_message": "ChEaDUNsaWVudFJlcXVlc3QgARAB"
     },
     {
       "message_origin": "server",
-      "raw_message": "U2VydmVyUmVzcG9uc2U="
+      "raw_message": "ChIaDlNlcnZlclJlc3BvbnNlIAIQAg=="
     }
   ],
   "metadata": {
@@ -32,11 +32,11 @@
   "messages": [
     {
       "message_origin": "server",
-      "raw_message": "U2VydmVyUmVzcG9uc2U="
+      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw=="
     },
     {
       "message_origin": "server",
-      "raw_message": "U2VydmVyTWVzc2FnZTI="
+      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UyIAQQBA=="
     }
   ],
   "metadata": {

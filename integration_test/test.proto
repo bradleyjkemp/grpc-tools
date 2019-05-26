@@ -1,0 +1,12 @@
+syntax = "proto3";
+package main;
+
+message Outer {
+    Inner outer_value = 1;
+    int64 outer_num = 2;
+}
+
+message Inner {
+    string inner_value = 3;
+    int64 inner_num = 4;
+}

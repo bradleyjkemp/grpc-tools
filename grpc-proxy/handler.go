@@ -13,6 +13,11 @@ import (
 	"os"
 )
 
+var proxyStreamDesc = &grpc.StreamDesc{
+	ServerStreams: true,
+	ClientStreams: true,
+}
+
 // Originally based on github.com/mwitkow/grpc-proxy/proxy/handler.go
 func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	md, ok := metadata.FromIncomingContext(ss.Context())

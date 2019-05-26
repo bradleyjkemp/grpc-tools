@@ -17,11 +17,6 @@ import (
 	"strings"
 )
 
-var proxyStreamDesc = &grpc.StreamDesc{
-	ServerStreams: true,
-	ClientStreams: true,
-}
-
 type server struct {
 	serverOptions []grpc.ServerOption
 
@@ -60,21 +55,18 @@ func (s *server) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on port (%d): %v", s.port, err)
 	}
-	if _, ok := listener.(*net.TCPListener); !ok {
-		return fmt.Errorf("can only listen on a TCP listener")
-	}
 	fmt.Fprintf(os.Stderr, "Listening on %s\n", listener.Addr()) // TODO move this to a logger controllable by options
 	proxyLis := &proxyListener{
 		channel:     s.proxiedConns,
 		TCPListener: listener.(*net.TCPListener),
 	}
 
-	wrappedProxy := grpcweb.WrapServer(
+	grpcWebHandler := grpcweb.WrapServer(
 		grpc.NewServer(s.serverOptions...),
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false), // because we are proxying
 	)
-	httpServer := s.newHttpServer(wrappedProxy, false)
-	httpsServer := s.newHttpServer(wrappedProxy, true)
+	httpServer := s.newHttpServer(grpcWebHandler)
+	httpsServer := withHttpsMarkerMiddleware(s.newHttpServer(grpcWebHandler))
 
 	var x509Cert *x509.Certificate
 	if s.certFile != "" && s.keyFile != "" {
@@ -90,7 +82,7 @@ func (s *server) Start() error {
 		}
 	}
 
-	httpLis, httpsLis := newHttpHttpsMux(proxyLis, x509Cert)
+	httpLis, httpsLis := newTlsMux(proxyLis, x509Cert)
 	go httpsServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
 
 	// Unencrypted HTTP2 is not supported by default so need this wrapper
@@ -111,46 +103,64 @@ func (s *server) handleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
-	var bidiConn bidirectionalConn
-	switch conn := clientConn.(type) {
-	case *net.TCPConn:
-		bidiConn = conn
-	case cmuxConn:
-		bidiConn = conn
-	default:
-		w.WriteHeader(http.StatusInternalServerError)
+	var conn tlsMuxConn
+	if conn, ok = clientConn.(tlsMuxConn); !ok {
+		fmt.Fprintf(os.Stderr, "Err: unknown connection type: %v\n", clientConn)
+		clientConn.Close()
 		return
 	}
-	s.proxiedConns <- &proxiedConn{bidiConn, r.Host}
+
+	s.proxiedConns <- &proxiedConn{conn, r.Host, conn.tls}
 }
 
-func (s *server) newHttpServer(wrappedProxy *grpcweb.WrappedGrpcServer, listensOnTLS bool) *http.Server {
-	httpReverseProxy := &httputil.ReverseProxy{
-		Director: func(request *http.Request) {
-			if tls.IsTLSRequest(request.Header) {
-				request.URL.Scheme = "https"
-			} else {
-				request.URL.Scheme = "http"
-			}
-			request.URL.Host = request.Host
-		},
-		ModifyResponse: func(response *http.Response) error {
-			return nil
-		},
-	}
+var httpReverseProxy = &httputil.ReverseProxy{
+	Director: func(request *http.Request) {
+		// Because of the TLSmux used to server HTTP and HTTPS on the same port
+		// we have to rely on the Forwarded header (added by middleware) to
+		// tell which protocol to use for proxying.
+		// (we could always set HTTP but would mean relying on the upstream
+		// properly redirecting HTTP->HTTPS)
+		if tls.IsTLSRequest(request.Header) {
+			request.URL.Scheme = "https"
+		} else {
+			request.URL.Scheme = "http"
+		}
+		request.URL.Host = request.Host
+	},
+	ModifyResponse: func(response *http.Response) error {
+		return nil
+	},
+}
+
+func isGrpcRequest(server *grpcweb.WrappedGrpcServer, r *http.Request) bool {
+	return server.IsAcceptableGrpcCorsRequest(r) || // CORS request from browser
+		server.IsGrpcWebRequest(r) || // gRPC-Web request from browser
+		r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") // Standard gRPC request
+}
+
+func (s *server) newHttpServer(grpcHandler *grpcweb.WrappedGrpcServer) *http.Server {
 	return &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if listensOnTLS {
-				tls.AddHTTPSMarker(r.Header)
-			}
 			switch {
 			case r.Method == http.MethodConnect:
 				s.handleConnect(w, r)
-			case wrappedProxy.IsGrpcWebRequest(r) || r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc"):
-				wrappedProxy.ServeHTTP(w, r)
+			case isGrpcRequest(grpcHandler, r):
+				grpcHandler.ServeHTTP(w, r)
 			default:
+				// Many clients use a mix of gRPC and non-gRPC requests
+				// so must try to be as transparent as possible for normal
+				// HTTP requests by proxying the request to the original destination.
 				httpReverseProxy.ServeHTTP(w, r)
 			}
 		}),
 	}
+}
+
+func withHttpsMarkerMiddleware(server *http.Server) *http.Server {
+	wrappedHandler := server.Handler
+	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tls.AddHTTPSMarker(r.Header)
+		wrappedHandler.ServeHTTP(w, r)
+	})
+	return server
 }

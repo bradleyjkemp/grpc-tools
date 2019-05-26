@@ -14,6 +14,7 @@ type bidirectionalConn interface {
 type proxiedConn struct {
 	bidirectionalConn
 	originalDestination string
+	tls                 bool
 }
 
 // listens on a net.Listener as well as a channel for internal redirects

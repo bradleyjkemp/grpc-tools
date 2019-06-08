@@ -30,11 +30,11 @@ func makeRPCSelectionTable(previewPane *tview.Table) *tview.Table {
 	table := tview.NewTable()
 	table.SetSelectable(true, false) // only be able to select entire RPCs
 
-	// Set up headings
-	table.SetCellSimple(0, 0)
-	tview.NewTableCell()
+	//// Set up headings
+	//table.SetCellSimple(0, 0, "Service")
+	//table.SetCellSimple(0, 1, "Method")
 
-	dumpFile, err := os.Open("dpl-list.dump")
+	dumpFile, err := os.Open(os.Args[1])
 	if err != nil {
 		panic(err)
 	}
@@ -57,16 +57,17 @@ func makeRPCSelectionTable(previewPane *tview.Table) *tview.Table {
 
 	onchanged := func(rpcNum, _ int) {
 		rpc := rpcs[rpcNum]
-
-		previewPane.SetCellSimple(0, 0, rpc.Service)
-		previewPane.SetCellSimple(0, 1, rpc.Method)
 		for i, message := range rpc.Messages {
-			messagePreview := string(message.ServerMessage)
-			if messagePreview == "" {
+			previewPane.SetCellSimple(i, 0, string(message.MessageOrigin))
+			var messagePreview string
+			if message.Message != nil {
+				marshalled, _ := json.Marshal(message.Message)
+				messagePreview = string(marshalled)
+			} else {
 				messagePreview = string(message.RawMessage)
 			}
 
-			previewPane.SetCellSimple(i+1, 0, messagePreview)
+			previewPane.SetCellSimple(i, 1, messagePreview)
 		}
 	}
 

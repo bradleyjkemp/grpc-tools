@@ -22,11 +22,14 @@ For example you can build applications that:
 `grpc-proxy` can only intercept requests if the application supports HTTP proxies. The standard gRPC libraries support HTTP proxies by default but applications can override this behaviour by using a custom Dialer.
 
 Troubleshooting steps:
-1. Check whether the application supports HTTP proxies.
+1. Check whether the application supports HTTP proxies, if your application does not support HTTP proxies, go straight to the instructions for using `grpc-proxy` in [fallback mode](#using-grpc-proxy-in-fallback-mode).
 1. Check your application is configured to use the HTTP proxy. This is normally done by setting the `HTTP_PROXY` environment variable to the address `grpc-proxy` is listening on (e.g. `HTTP_PROXY=localhost:12345`).
-1. Try using `grpc-proxy` as your system proxy. This will mean traffic from all applications will go through the proxy.
-**Warning**: this may cause other applications to not work properly if `grpc-proxy` is unable to proxy its requests properly. It's preferable to only configure the target application to use the proxy to minimise potential disruption.
-1. Try using `grpc-proxy` in fallback mode instead.
+
+    Some applications interpret these environment variables differently, you may have to set both `HTTP_PROXY` and `HTTPS_PROXY` to point to `grpc-proxy`.
+1. Try using `grpc-proxy` as your system proxy. This will mean traffic from all applications will go through the proxy. You can find instructions for this [here](https://software.intel.com/en-us/articles/how-to-set-system-proxy).
+
+    **Warning**: this may cause other applications to not work properly if `grpc-proxy` is unable to proxy its requests properly. It's preferable to only configure the target application to use the proxy to minimise potential disruption.
+1. Try using `grpc-proxy` in fallback mode instead (see below for details).
 
 ### Using `grpc-proxy` in fallback mode
 

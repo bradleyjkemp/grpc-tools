@@ -10,7 +10,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"io"
+	"net"
 	"os"
+	"strings"
 )
 
 var proxyStreamDesc = &grpc.StreamDesc{
@@ -39,9 +41,22 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 		return status.Error(codes.Unimplemented, "no proxy destination configured")
 	}
 
+	// if this a gRPC-Web connection then it doesn't have a port so we add the default
+	if !strings.Contains(destinationAddr, ":") {
+		if marker.IsTLSRPC(md) {
+			destinationAddr = destinationAddr + ":443"
+		} else {
+			destinationAddr = destinationAddr + ":80"
+		}
+	}
+
 	options := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(NoopCodec{})),
 		grpc.WithBlock(),
+		// use a custom dialer to ensure we don't get intercepted by ourselves
+		grpc.WithContextDialer(func(ctx context.Context, dest string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "tcp", dest)
+		}),
 	}
 	if marker.IsTLSRPC(md) {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
@@ -53,7 +68,6 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	if err != nil {
 		return err
 	}
-
 	// little bit of gRPC internals never hurt anyone
 	fullMethodName, ok := grpc.MethodFromServerStream(ss)
 	if !ok {

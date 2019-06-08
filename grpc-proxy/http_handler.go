@@ -72,6 +72,7 @@ func isGrpcRequest(server *grpcweb.WrappedGrpcServer, r *http.Request) bool {
 		r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") // Standard gRPC request
 }
 
+// TODO: move this to the request handler by checking the request.TLS field
 func withHttpsMarkerMiddleware(server *http.Server) *http.Server {
 	wrappedHandler := server.Handler
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

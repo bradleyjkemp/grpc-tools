@@ -19,7 +19,7 @@ go install github.com/bradleyjkemp/grpc-tools/...
 
 ## grpc-dump
 
-Basic usage:
+Basic example:
 ```bash
 # start the proxy (leave out the --port flag to automatically pick on)
 grpc-dump --port=12345
@@ -47,15 +47,21 @@ More details for using `grpc-dump` can be found [here](grpc-dump/README.md).
 
 ## grpc-fixture
 
-Basic usage:
+Basic example:
 ```bash
 # save the (stdout) output of grpc-dump to a file
-grpc-dump --port=12345 > myapp.dump
+grpc-dump --port=12345 > my-app.dump
 
 # in another, run your application pointing it at the proxy
 HTTP_PROXY=localhost:12345 my-app
 
-# all the requests made by the application will be logged in the grpc-dump window
+# now run grpc-fixture from the previously saved output
+grpc-fixture --port=12345 --dump=my-app.dump
+
+# when running the application again, all requests will
+# be intercepted and answered with saved responses,
+# no requests will be made to the real gRPC server.
+HTTP_PROXY=localhost:12345 my-app
 ```
 
 For applications that expect a TLS server, the same `--key` and `--cert` flags can be used as described above for `grpc-dump`.

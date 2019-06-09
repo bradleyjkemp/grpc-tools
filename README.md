@@ -1,4 +1,4 @@
-# grpc-tools
+# grpc-tools [![CircleCI](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master.svg?style=svg)](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master)
 
 A suite of tools for gRPC debugging and development.
 

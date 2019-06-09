@@ -10,7 +10,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"io"
-	"net"
 	"os"
 	"strings"
 )
@@ -53,10 +52,6 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	options := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(NoopCodec{})),
 		grpc.WithBlock(),
-		// use a custom dialer to ensure we don't get intercepted by ourselves
-		grpc.WithContextDialer(func(ctx context.Context, dest string) (net.Conn, error) {
-			return (&net.Dialer{}).DialContext(ctx, "tcp", dest)
-		}),
 	}
 	if marker.IsTLSRPC(md) {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))

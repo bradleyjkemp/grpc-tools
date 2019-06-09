@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
+killall grpc-fixture
+killall grpc-dump
 set -e
 
+testDir=$(dirname "${BASH_SOURCE}")
+pushd "${testDir}"
 certFile="_wildcard.github.io.pem"
 keyFile="_wildcard.github.io-key.pem"
 
@@ -52,3 +56,4 @@ rm ./grpc-fixture
 rm ./grpc-dump
 rm ./grpc-replay
 rm test-result.json
+popd

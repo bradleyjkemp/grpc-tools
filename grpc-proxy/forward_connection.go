@@ -3,21 +3,59 @@ package grpc_proxy
 import (
 	"io"
 	"net"
+	"sync"
 )
 
-func forwardConnection(proxConn proxiedConn) error {
-	destinationConn, err := net.Dial(proxConn.LocalAddr().Network(), proxConn.originalDestination)
+type tcpLike interface {
+	CloseRead() error
+	CloseWrite() error
+}
+
+func forwardConnection(conn net.Conn, destination string) error {
+	destConn, err := net.Dial(conn.LocalAddr().Network(), destination)
 	if err != nil {
 		return err
 	}
-	destConnTCP := destinationConn.(*net.TCPConn)
-	go copyAndClose(proxConn, destConnTCP)
-	go copyAndClose(destConnTCP, proxConn)
+
+	if isTCPTunnel(conn, destConn) {
+		// each side of the connection can be closed independently so no synchronisation required
+		go copyAndCloseTCP(conn, destConn)
+		go copyAndCloseTCP(destConn, conn)
+		return nil
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		io.Copy(conn, destConn)
+		wg.Done()
+	}()
+	go func() {
+		io.Copy(destConn, conn)
+		wg.Done()
+	}()
+	go func() {
+		wg.Wait()
+		conn.Close()
+		destConn.Close()
+	}()
 	return nil
 }
 
-func copyAndClose(dst, src bidirectionalConn) {
+func copyAndCloseTCP(dst, src net.Conn) {
 	io.Copy(dst, src)
-	dst.CloseWrite()
-	src.CloseRead()
+	dst.(tcpLike).CloseWrite()
+	src.(tcpLike).CloseRead()
+}
+
+// checks if the two connections are "TCP-like"
+// i.e. the two connection halves can be close separately
+func isTCPTunnel(a, b net.Conn) bool {
+	type tcpLike interface {
+		CloseRead() error
+		CloseWrite() error
+	}
+	_, aTCP := a.(tcpLike)
+	_, bTCP := b.(tcpLike)
+	return aTCP && bTCP
 }

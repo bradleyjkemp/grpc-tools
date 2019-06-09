@@ -115,15 +115,14 @@ func handleTlsConn(conn net.Conn, r io.Reader, cert *x509.Certificate, tlsConns 
 			// cannot intercept so will just transparently proxy instead
 			// TODO: move this to a debug log level
 			//fmt.Fprintln(os.Stderr, "Err: do not have a certificate that can serve", originalHostname)
-			err := forwardConnection(proxiedConn{
+			err := forwardConnection(
 				tlsMuxConn{ // TODO: this is pretty messed up but required because of the peeking that has already occurred
 					reader:            r,
 					bidirectionalConn: connType,
 					tls:               true,
 				},
 				connType.originalDestination,
-				true,
-			})
+			)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "Err: error proxying to", originalHostname, err)
 			}

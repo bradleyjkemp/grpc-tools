@@ -11,12 +11,7 @@ type tcpLike interface {
 	CloseWrite() error
 }
 
-func forwardConnection(conn net.Conn, destination string) error {
-	destConn, err := net.Dial(conn.LocalAddr().Network(), destination)
-	if err != nil {
-		return err
-	}
-
+func forwardConnection(conn net.Conn, destConn net.Conn) error {
 	if isTCPTunnel(conn, destConn) {
 		// each side of the connection can be closed independently so no synchronisation required
 		go copyAndCloseTCP(conn, destConn)

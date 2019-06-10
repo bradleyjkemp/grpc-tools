@@ -7,7 +7,11 @@ import (
 
 type proxiedConn struct {
 	net.Conn
-	originalDestination string
+	originalDest string
+}
+
+func (p proxiedConn) originalDestination() string {
+	return p.originalDest
 }
 
 // listens on a net.Listener as well as a channel for internal redirects
@@ -43,8 +47,8 @@ func (l *proxyListener) Accept() (net.Conn, error) {
 					continue
 				}
 				l.channel <- proxiedConn{
-					Conn:                conn,
-					originalDestination: l.TCPListener.Addr().String(),
+					Conn:         conn,
+					originalDest: l.TCPListener.Addr().String(),
 				}
 			}
 		}()

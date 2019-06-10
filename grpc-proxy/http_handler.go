@@ -14,15 +14,8 @@ import (
 )
 
 func newHttpServer(grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func(net.Conn, string)) *http.Server {
-	s := &http.Server{
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.TLS != nil {
-				// Knowing whether this came in over HTTP or HTTPS
-				// is important for being able to replay the request.
-				// This adds a Forwarded header with the protocol information.
-				marker.AddHTTPSMarker(r.Header)
-			}
-
+	return &http.Server{
+		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch {
 			case r.Method == http.MethodConnect:
 				handleConnect(w, r, internalRedirect)
@@ -34,12 +27,8 @@ func newHttpServer(grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func
 				// HTTP requests by proxying the request to the original destination.
 				httpReverseProxy.ServeHTTP(w, r)
 			}
-		}),
+		}), &http2.Server{}),
 	}
-
-	s.Handler = h2c.NewHandler(s.Handler, &http2.Server{}) // Adds support for unencrypted HTTP2
-
-	return s
 }
 
 func handleConnect(w http.ResponseWriter, r *http.Request, internalRedirect func(net.Conn, string)) {
@@ -84,4 +73,20 @@ func isGrpcRequest(server *grpcweb.WrappedGrpcServer, r *http.Request) bool {
 	return server.IsAcceptableGrpcCorsRequest(r) || // CORS request from browser
 		server.IsGrpcWebRequest(r) || // gRPC-Web request from browser
 		r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") // Standard gRPC request
+}
+
+// Knowing whether a request came in over HTTP or HTTPS
+// is important for being able to replay the request.
+// This adds a Forwarded header with the protocol information.
+//
+// It also adds a wrapper to enable HTTP2 on "unencrypted" connections.
+// (not actually unencrypted because we're using a TLS listener)
+func withHttpsMiddleware(server *http.Server) *http.Server {
+	wrappedHandler := server.Handler
+	server.Handler = h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		marker.AddHTTPSMarker(r.Header)
+		wrappedHandler.ServeHTTP(w, r)
+	}), &http2.Server{})
+
+	return server
 }

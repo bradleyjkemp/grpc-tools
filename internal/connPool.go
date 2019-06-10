@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"google.golang.org/grpc"
 	"sync"
 )
@@ -26,7 +27,7 @@ func (c *ConnPool) GetClientConn(ctx context.Context, destination string, dialOp
 
 	conn, err := grpc.DialContext(ctx, destination, dialOptions...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed dialing %s: %v", destination, err)
 	}
 
 	c.conns[destination] = conn

@@ -5,16 +5,9 @@ import (
 	"sync"
 )
 
-type bidirectionalConn interface {
-	net.Conn
-	CloseRead() error
-	CloseWrite() error
-}
-
 type proxiedConn struct {
-	bidirectionalConn
+	net.Conn
 	originalDestination string
-	tls                 bool
 }
 
 // listens on a net.Listener as well as a channel for internal redirects
@@ -35,8 +28,8 @@ func newProxyListener(listener *net.TCPListener) *proxyListener {
 	}
 }
 
-func (l *proxyListener) internalRedirect(conn proxiedConn) {
-	l.channel <- conn
+func (l *proxyListener) internalRedirect(conn net.Conn, originalDestination string) {
+	l.channel <- proxiedConn{conn, originalDestination}
 }
 
 func (l *proxyListener) Accept() (net.Conn, error) {
@@ -50,7 +43,7 @@ func (l *proxyListener) Accept() (net.Conn, error) {
 					continue
 				}
 				l.channel <- proxiedConn{
-					bidirectionalConn:   conn,
+					Conn:                conn,
 					originalDestination: l.TCPListener.Addr().String(),
 				}
 			}

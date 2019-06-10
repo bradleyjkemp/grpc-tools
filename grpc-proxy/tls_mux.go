@@ -52,8 +52,7 @@ func (c *tlsMuxListener) Addr() net.Addr {
 
 type tlsMuxConn struct {
 	reader io.Reader
-	bidirectionalConn
-	tls bool
+	net.Conn
 }
 
 func (c tlsMuxConn) Read(b []byte) (n int, err error) {
@@ -67,23 +66,19 @@ func newTlsMux(listener net.Listener, cert *x509.Certificate) (nonTls net.Listen
 	var tlsErrs = make(chan error, 1)
 	go func() {
 		for {
-			conn, err := listener.Accept()
+			rawConn, err := listener.Accept()
 			if err != nil {
 				nonTlsErrs <- err
 				tlsErrs <- err
 				continue
 			}
 
-			peeker := bufio.NewReaderSize(conn, peekSize)
-			peek, err := peeker.Peek(peekSize)
-			if err != nil {
-				nonTlsErrs <- err
-				tlsErrs <- err
-			}
-			if tlsPattern.Match(peek) {
-				handleTlsConn(conn, peeker, cert, tlsConns)
+			conn, isTls, err := isTlsConn(rawConn)
+
+			if isTls {
+				handleTlsConn(conn, cert, tlsConns)
 			} else {
-				handleNonTlsConn(conn, peeker, nonTlsConns)
+				nonTlsConns <- conn
 			}
 		}
 	}()
@@ -99,28 +94,20 @@ func newTlsMux(listener net.Listener, cert *x509.Certificate) (nonTls net.Listen
 		}
 }
 
-func handleTlsConn(conn net.Conn, r io.Reader, cert *x509.Certificate, tlsConns chan net.Conn) {
-	switch connType := conn.(type) {
+func handleTlsConn(conn tlsMuxConn, cert *x509.Certificate, tlsConns chan net.Conn) {
+	switch connType := conn.Conn.(type) {
 	case proxiedConn:
 		// trim the port suffix
 		originalHostname := strings.Split(connType.originalDestination, ":")[0]
 		if cert != nil && cert.VerifyHostname(originalHostname) == nil {
 			// the certificate we have allows us to intercept this connection
-			tlsConns <- tlsMuxConn{
-				reader:            r,
-				bidirectionalConn: connType,
-				tls:               true,
-			}
+			tlsConns <- conn
 		} else {
 			// cannot intercept so will just transparently proxy instead
 			// TODO: move this to a debug log level
 			//fmt.Fprintln(os.Stderr, "Err: do not have a certificate that can serve", originalHostname)
 			err := forwardConnection(
-				tlsMuxConn{ // TODO: this is pretty messed up but required because of the peeking that has already occurred
-					reader:            r,
-					bidirectionalConn: connType,
-					tls:               true,
-				},
+				conn,
 				connType.originalDestination,
 			)
 			if err != nil {
@@ -129,12 +116,8 @@ func handleTlsConn(conn net.Conn, r io.Reader, cert *x509.Certificate, tlsConns 
 		}
 
 	case *net.TCPConn:
-		// either this was a direct connection or we're proxying for a hostname we can intercept
-		tlsConns <- tlsMuxConn{
-			reader:            r,
-			bidirectionalConn: connType,
-			tls:               true,
-		}
+		// this was a direct connection (proxy is being used in fallback mode)
+		tlsConns <- conn
 
 	default:
 		fmt.Fprintln(os.Stderr, "Err: unknown connection type", connType)
@@ -142,17 +125,17 @@ func handleTlsConn(conn net.Conn, r io.Reader, cert *x509.Certificate, tlsConns 
 	}
 }
 
-func handleNonTlsConn(conn net.Conn, r io.Reader, nonTlsConns chan net.Conn) {
-	switch bidiConn := conn.(type) {
-	case bidirectionalConn:
-		nonTlsConns <- tlsMuxConn{
-			reader:            r,
-			bidirectionalConn: bidiConn,
-			tls:               false,
-		}
-	default:
-		fmt.Fprintln(os.Stderr, "Err: unknown connection type", bidiConn)
-		conn.Close()
+// Takes a net.Conn and peeks to see if it is a TLS conn or not.
+// The original net.Conn *cannot* be used after calling.
+func isTlsConn(conn net.Conn) (tlsMuxConn, bool, error) {
+	peeker := bufio.NewReaderSize(conn, peekSize)
+	peek, err := peeker.Peek(peekSize)
+	if err != nil {
+		return tlsMuxConn{}, false, err
 	}
 
+	return tlsMuxConn{
+		reader: peeker,
+		Conn:   conn,
+	}, tlsPattern.Match(peek), nil
 }

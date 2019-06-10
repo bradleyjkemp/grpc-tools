@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"net"
 	"os"
@@ -71,11 +69,8 @@ func (s *server) Start() error {
 	proxyLis := newProxyListener(listener.(*net.TCPListener))
 
 	httpServer := newHttpServer(grpcWebHandler, proxyLis.internalRedirect)
-	httpServer.Handler = h2c.NewHandler(httpServer.Handler, &http2.Server{}) // Adds support for unencrypted HTTP
-	httpsServer := withHttpsMarkerMiddleware(newHttpServer(grpcWebHandler, proxyLis.internalRedirect))
 
 	httpLis, httpsLis := newTlsMux(proxyLis, s.x509Cert)
-	go httpsServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
-
+	go httpServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
 	return httpServer.Serve(httpLis)
 }

@@ -4,15 +4,25 @@ import (
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strings"
 )
 
-func newHttpServer(grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func(proxiedConn)) *http.Server {
-	return &http.Server{
+func newHttpServer(grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func(net.Conn, string)) *http.Server {
+	s := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.TLS != nil {
+				// Knowing whether this came in over HTTP or HTTPS
+				// is important for being able to replay the request.
+				// This adds a Forwarded header with the protocol information.
+				marker.AddHTTPSMarker(r.Header)
+			}
+
 			switch {
 			case r.Method == http.MethodConnect:
 				handleConnect(w, r, internalRedirect)
@@ -26,9 +36,13 @@ func newHttpServer(grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func
 			}
 		}),
 	}
+
+	s.Handler = h2c.NewHandler(s.Handler, &http2.Server{}) // Adds support for unencrypted HTTP2
+
+	return s
 }
 
-func handleConnect(w http.ResponseWriter, r *http.Request, internalRedirect func(proxiedConn)) {
+func handleConnect(w http.ResponseWriter, r *http.Request, internalRedirect func(net.Conn, string)) {
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
@@ -47,7 +61,7 @@ func handleConnect(w http.ResponseWriter, r *http.Request, internalRedirect func
 		return
 	}
 
-	internalRedirect(proxiedConn{conn, r.Host, conn.tls})
+	internalRedirect(conn, r.Host)
 }
 
 var httpReverseProxy = &httputil.ReverseProxy{
@@ -70,14 +84,4 @@ func isGrpcRequest(server *grpcweb.WrappedGrpcServer, r *http.Request) bool {
 	return server.IsAcceptableGrpcCorsRequest(r) || // CORS request from browser
 		server.IsGrpcWebRequest(r) || // gRPC-Web request from browser
 		r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") // Standard gRPC request
-}
-
-// TODO: move this to the request handler by checking the request.TLS field
-func withHttpsMarkerMiddleware(server *http.Server) *http.Server {
-	wrappedHandler := server.Handler
-	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		marker.AddHTTPSMarker(r.Header)
-		wrappedHandler.ServeHTTP(w, r)
-	})
-	return server
 }

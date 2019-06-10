@@ -1,4 +1,4 @@
-# grpc-tools [![CircleCI](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master.svg?style=svg)](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master)
+# grpc-tools [![CircleCI](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master.svg?style=svg)](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master) ![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/bradleyjkemp/grpc-tools.svg?label=version)
 
 A suite of tools for gRPC debugging and development.
 
@@ -12,10 +12,12 @@ Tools include:
 
 These tools are in alpha so expect breaking changes between releases. See the [changelog](CHANGELOG.md) for full details.
 
-Installation:
+### Installation:
+Fetch the tools using:
 ```bash
 go install github.com/bradleyjkemp/grpc-tools/...
 ```
+All the tools in this repository will now be installed to your `$GOPATH/bin` or `$GOBIN` directory.
 
 ## grpc-dump
 

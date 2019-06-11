@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/tlsmux"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -81,7 +82,7 @@ func (s *server) Start() error {
 	httpServer := newHttpServer(grpcWebHandler, proxyLis.internalRedirect)
 	httpsServer := withHttpsMiddleware(newHttpServer(grpcWebHandler, proxyLis.internalRedirect))
 
-	httpLis, httpsLis := newTlsMux(s.logger, proxyLis, s.x509Cert, s.tlsCert)
+	httpLis, httpsLis := tlsmux.New(s.logger, proxyLis, s.x509Cert, s.tlsCert)
 
 	// the TLSMux unwraps TLS for us so we use Serve instead of ServeTLS
 	go httpsServer.Serve(httpsLis)

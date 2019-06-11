@@ -1,4 +1,4 @@
-package grpc_proxy
+package tlsmux
 
 import (
 	"io"

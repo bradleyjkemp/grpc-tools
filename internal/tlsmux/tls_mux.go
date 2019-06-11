@@ -1,4 +1,4 @@
-package grpc_proxy
+package tlsmux
 
 import (
 	"bufio"
@@ -63,7 +63,7 @@ func (c tlsMuxConn) originalDestination() string {
 	}
 }
 
-func newTlsMux(logger *logrus.Logger, listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {
+func New(logger *logrus.Logger, listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {
 	var nonTlsConns = make(chan net.Conn, 1)
 	var nonTlsErrs = make(chan error, 1)
 	var tlsConns = make(chan net.Conn, 1)

@@ -9,11 +9,11 @@ certFile="_wildcard.github.io.pem"
 keyFile="_wildcard.github.io-key.pem"
 
 if [[ ! -f "$certFile" ]]; then
-    echo "required file $certFile doesn't exist"
+    echo "required file $certFile doesn't exist, generate it using \"mkcert *.github.io\""
     exit 1
 fi
 if [[ ! -f "$keyFile" ]]; then
-    echo "required file $keyFile doesn't exist"
+    echo "required file $keyFile doesn't exist, generate it using \"mkcert *.github.io\""
     exit 1
 fi
 

@@ -4,10 +4,9 @@ import (
 	"bufio"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -64,7 +63,7 @@ func (c tlsMuxConn) originalDestination() string {
 	}
 }
 
-func newTlsMux(listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {
+func newTlsMux(logger *logrus.Logger, listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {
 	var nonTlsConns = make(chan net.Conn, 1)
 	var nonTlsErrs = make(chan error, 1)
 	var tlsConns = make(chan net.Conn, 1)
@@ -81,18 +80,18 @@ func newTlsMux(listener net.Listener, cert *x509.Certificate, tlsCert tls.Certif
 			conn, isTls, err := isTlsConn(rawConn)
 
 			if isTls {
-				handleTlsConn(conn, cert, tlsConns)
+				handleTlsConn(logger, conn, cert, tlsConns)
 			} else {
 				nonTlsConns <- conn
 			}
 		}
 	}()
 	closer := &sync.Once{}
-	return nonHTTPBouncer{&tlsMuxListener{
+	return nonHTTPBouncer{logger, &tlsMuxListener{
 			parent: listener,
 			close:  closer,
 			conns:  nonTlsConns,
-		}}, nonHTTPBouncer{tls.NewListener(&tlsMuxListener{
+		}}, nonHTTPBouncer{logger, tls.NewListener(&tlsMuxListener{
 			parent: listener,
 			close:  closer,
 			conns:  tlsConns,
@@ -101,7 +100,7 @@ func newTlsMux(listener net.Listener, cert *x509.Certificate, tlsCert tls.Certif
 		})}
 }
 
-func handleTlsConn(conn tlsMuxConn, cert *x509.Certificate, tlsConns chan net.Conn) {
+func handleTlsConn(logger *logrus.Logger, conn tlsMuxConn, cert *x509.Certificate, tlsConns chan net.Conn) {
 	switch connType := conn.Conn.(type) {
 	case proxiedConnection:
 		if connType.originalDestination() == "" {
@@ -117,19 +116,20 @@ func handleTlsConn(conn tlsMuxConn, cert *x509.Certificate, tlsConns chan net.Co
 			tlsConns <- conn
 		} else {
 			// cannot intercept so will just transparently proxy instead
-			// TODO: move this to a debug log level
-			//fmt.Fprintln(os.Stderr, "Err: do not have a certificate that can serve", originalHostname)
+			logger.Infof("No certificate able to intercept connections to %s, proxying instead.", originalHostname)
 			destConn, err := net.Dial(conn.LocalAddr().Network(), connType.originalDestination())
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "Err: error proxying to", originalHostname, err)
+				logger.WithError(err).Warnf("Failed proxying connection to %s, Error while dialing.", originalHostname)
 			}
-			err = forwardConnection(
-				conn,
-				destConn,
-			)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Err: error proxying to", originalHostname, err)
-			}
+			go func() {
+				err = forwardConnection(
+					conn,
+					destConn,
+				)
+				if err != nil {
+					logger.WithError(err).Warnf("Error proxying connection to %s.", originalHostname)
+				}
+			}()
 		}
 
 	default:
@@ -162,6 +162,7 @@ func isTlsConn(conn net.Conn) (tlsMuxConn, bool, error) {
 // to the original destination.
 // This is a single purpose version of github.com/soheilhy/cmux
 type nonHTTPBouncer struct {
+	logger *logrus.Logger
 	net.Listener
 }
 
@@ -202,12 +203,13 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 					Conn:   conn,
 				}, nil
 			}
+			b.logger.Debugf("Non HTTP connection to %s detected (peek: %s), proxying instead", connType.originalDestination(), string(peek))
 
 			// proxy this connection without interception
 			destination := connType.originalDestination()
 			destConn, err := tls.Dial(conn.LocalAddr().Network(), destination, nil)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "Err: error proxying to", destination, err)
+				b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
 			}
 
 			go func() {
@@ -216,7 +218,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 					destConn,
 				)
 				if err != nil {
-					fmt.Fprintln(os.Stderr, "Err: error proxying to", destination, err)
+					b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
 				}
 			}()
 

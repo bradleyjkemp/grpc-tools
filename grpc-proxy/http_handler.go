@@ -1,7 +1,6 @@
 package grpc_proxy
 
 import (
-	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"golang.org/x/net/http2"
@@ -9,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
-	"os"
 	"strings"
 )
 
@@ -43,14 +41,7 @@ func handleConnect(w http.ResponseWriter, r *http.Request, internalRedirect func
 		return
 	}
 	clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
-	var conn tlsMuxConn
-	if conn, ok = clientConn.(tlsMuxConn); !ok {
-		fmt.Fprintf(os.Stderr, "Err: unknown connection type: %v\n", clientConn)
-		clientConn.Close()
-		return
-	}
-
-	internalRedirect(conn, r.Host)
+	internalRedirect(clientConn, r.Host)
 }
 
 var httpReverseProxy = &httputil.ReverseProxy{

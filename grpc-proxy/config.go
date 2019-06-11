@@ -2,6 +2,7 @@ package grpc_proxy
 
 import (
 	"flag"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -31,6 +32,7 @@ var (
 	fCertFile    string
 	fKeyFile     string
 	fDestination string
+	fLogLevel    string
 )
 
 // Must be called before flag.Parse() if using the DefaultFlags option
@@ -39,6 +41,7 @@ func RegisterDefaultFlags() {
 	flag.StringVar(&fCertFile, "cert", "", "Certificate file to use for serving using TLS.")
 	flag.StringVar(&fKeyFile, "key", "", "Key file to use for serving using TLS.")
 	flag.StringVar(&fDestination, "destination", "", "Destination server to forward requests to if no destination can be inferred from the request itself. This is generally only used for clients not supporting HTTP proxies.")
+	flag.StringVar(&fLogLevel, "log_level", logrus.InfoLevel.String(), "Set the log level that grpc-proxy will log at. Values are {error, warning, info, debug}")
 }
 
 // This must be used after a call to flag.Parse()

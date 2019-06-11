@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"net"
-	"os"
 )
 
 type server struct {
 	serverOptions []grpc.ServerOption
 	grpcServer    *grpc.Server
+	logger        *logrus.Logger
 
 	port     int
 	certFile string
@@ -30,6 +31,7 @@ type server struct {
 func New(configurators ...Configurator) (*server, error) {
 	s := &server{
 		connPool: internal.NewConnPool(),
+		logger:   logrus.New(),
 	}
 	s.serverOptions = []grpc.ServerOption{
 		grpc.CustomCodec(NoopCodec{}),              // Allows for passing raw []byte messages around
@@ -39,6 +41,12 @@ func New(configurators ...Configurator) (*server, error) {
 	for _, configurator := range configurators {
 		configurator(s)
 	}
+
+	level, err := logrus.ParseLevel(fLogLevel)
+	if err != nil {
+		return nil, err
+	}
+	s.logger.SetLevel(level)
 
 	if s.certFile != "" && s.keyFile != "" {
 		var err error
@@ -61,19 +69,19 @@ func (s *server) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on port (%d): %v", s.port, err)
 	}
-	fmt.Fprintf(os.Stderr, "Listening on %s\n", listener.Addr()) // TODO move this to a logger controllable by options
+	s.logger.Infof("Listening on %s", listener.Addr())
 
 	grpcWebHandler := grpcweb.WrapServer(
 		grpc.NewServer(s.serverOptions...),
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false), // because we are proxying
 	)
 
-	proxyLis := newProxyListener(listener.(*net.TCPListener))
+	proxyLis := newProxyListener(s.logger, listener)
 
 	httpServer := newHttpServer(grpcWebHandler, proxyLis.internalRedirect)
 	httpsServer := withHttpsMiddleware(newHttpServer(grpcWebHandler, proxyLis.internalRedirect))
 
-	httpLis, httpsLis := newTlsMux(proxyLis, s.x509Cert, s.tlsCert)
+	httpLis, httpsLis := newTlsMux(s.logger, proxyLis, s.x509Cert, s.tlsCert)
 
 	// the TLSMux unwraps TLS for us so we use Serve instead of ServeTLS
 	go httpsServer.Serve(httpsLis)

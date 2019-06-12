@@ -7,6 +7,36 @@ For example you can build applications that:
 * Respond to requests using saved/mocked responses (e.g. [`grpc-fixture`](../grpc-fixture/README.md)).
 * Modify request contents before it is sent to the server and modify the server response before it is returned to the client.
 
+## Basic example
+
+`grpc-proxy` is super simple to use, this short snippet is a simplified version of `grpc-dump` that logs the service names of all intercepted methods:
+
+```go
+package main
+
+import (
+	"flag"
+	"fmt"
+	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
+	"google.golang.org/grpc"
+)
+
+func main() {
+	grpc_proxy.RegisterDefaultFlags()
+	flag.Parse()
+	proxy, _ := grpc_proxy.New(
+        grpc_proxy.WithInterceptor(intercept),
+        grpc_proxy.DefaultFlags(),
+    )
+    proxy.Start()
+}
+
+func intercept(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	fmt.Println(info.FullMethod)
+	return handler(srv, ss)
+}
+```
+
 ## Features
 
 * Acts as a HTTP proxy silently intercepting traffic from all applications that support HTTP proxies.

@@ -11,7 +11,7 @@ type proxiedConn struct {
 	originalDest string
 }
 
-func (p proxiedConn) originalDestination() string {
+func (p proxiedConn) OriginalDestination() string {
 	return p.originalDest
 }
 
@@ -19,7 +19,7 @@ func (p proxiedConn) originalDestination() string {
 // while preserving original destination
 type proxyListener struct {
 	logger  *logrus.Logger
-	channel chan proxiedConn
+	channel chan net.Conn
 	errs    chan error
 	net.Listener
 	once sync.Once
@@ -28,7 +28,7 @@ type proxyListener struct {
 func newProxyListener(logger *logrus.Logger, listener net.Listener) *proxyListener {
 	return &proxyListener{
 		logger:   logger,
-		channel:  make(chan proxiedConn),
+		channel:  make(chan net.Conn),
 		errs:     make(chan error),
 		Listener: listener,
 		once:     sync.Once{},
@@ -50,10 +50,7 @@ func (l *proxyListener) Accept() (net.Conn, error) {
 					continue
 				}
 				l.logger.Debugf("Got connection from address %v", conn.RemoteAddr())
-				l.channel <- proxiedConn{
-					Conn:         conn,
-					originalDest: l.Listener.Addr().String(),
-				}
+				l.channel <- conn
 			}
 		}()
 	})

@@ -54,10 +54,10 @@ func (c tlsMuxConn) Read(b []byte) (n int, err error) {
 	return c.reader.Read(b)
 }
 
-func (c tlsMuxConn) originalDestination() string {
+func (c tlsMuxConn) OriginalDestination() string {
 	switch underlying := c.Conn.(type) {
 	case proxiedConnection:
-		return underlying.originalDestination()
+		return underlying.OriginalDestination()
 	default:
 		return ""
 	}
@@ -87,37 +87,42 @@ func New(logger *logrus.Logger, listener net.Listener, cert *x509.Certificate, t
 		}
 	}()
 	closer := &sync.Once{}
-	return nonHTTPBouncer{logger, &tlsMuxListener{
-			parent: listener,
-			close:  closer,
-			conns:  nonTlsConns,
-		}}, nonHTTPBouncer{logger, tls.NewListener(&tlsMuxListener{
-			parent: listener,
-			close:  closer,
-			conns:  tlsConns,
-		}, &tls.Config{
-			Certificates: []tls.Certificate{tlsCert},
-		})}
+	nonTlsListener := nonHTTPBouncer{logger, &tlsMuxListener{
+		parent: listener,
+		close:  closer,
+		conns:  nonTlsConns,
+	}, false}
+	tlsListener := nonHTTPBouncer{logger, tls.NewListener(&tlsMuxListener{
+		parent: listener,
+		close:  closer,
+		conns:  tlsConns,
+	}, &tls.Config{
+		Certificates: []tls.Certificate{tlsCert},
+	}), true}
+	return nonTlsListener, tlsListener
 }
 
-func handleTlsConn(logger *logrus.Logger, conn tlsMuxConn, cert *x509.Certificate, tlsConns chan net.Conn) {
-	switch connType := conn.Conn.(type) {
+func handleTlsConn(logger *logrus.Logger, conn net.Conn, cert *x509.Certificate, tlsConns chan net.Conn) {
+	logger.Debugf("Handling TLS connection %v", conn)
+	switch connType := conn.(type) {
 	case proxiedConnection:
-		if connType.originalDestination() == "" {
+		if connType.OriginalDestination() == "" {
+			logger.Debug("Connection has no original destination so must intercept")
 			// cannot be forwarded so must accept regardless of whether we are able to intercept
 			tlsConns <- conn
 			return
 		}
+		logger.Debugf("Got TLS connection for destination %s", connType.OriginalDestination())
 
 		// trim the port suffix
-		originalHostname := strings.Split(connType.originalDestination(), ":")[0]
+		originalHostname := strings.Split(connType.OriginalDestination(), ":")[0]
 		if cert != nil && cert.VerifyHostname(originalHostname) == nil {
 			// the certificate we have allows us to intercept this connection
 			tlsConns <- conn
 		} else {
 			// cannot intercept so will just transparently proxy instead
 			logger.Infof("No certificate able to intercept connections to %s, proxying instead.", originalHostname)
-			destConn, err := net.Dial(conn.LocalAddr().Network(), connType.originalDestination())
+			destConn, err := net.Dial(conn.LocalAddr().Network(), connType.OriginalDestination())
 			if err != nil {
 				logger.WithError(err).Warnf("Failed proxying connection to %s, Error while dialing.", originalHostname)
 			}
@@ -144,7 +149,7 @@ var (
 
 // Takes a net.Conn and peeks to see if it is a TLS conn or not.
 // The original net.Conn *cannot* be used after calling.
-func isTlsConn(conn net.Conn) (tlsMuxConn, bool, error) {
+func isTlsConn(conn net.Conn) (net.Conn, bool, error) {
 	peeker := bufio.NewReaderSize(conn, tlsPeekSize)
 	peek, err := peeker.Peek(tlsPeekSize)
 	if err != nil {
@@ -164,6 +169,7 @@ func isTlsConn(conn net.Conn) (tlsMuxConn, bool, error) {
 type nonHTTPBouncer struct {
 	logger *logrus.Logger
 	net.Listener
+	tls bool
 }
 
 var (
@@ -173,7 +179,7 @@ var (
 )
 
 type proxiedConnection interface {
-	originalDestination() string
+	OriginalDestination() string
 }
 
 func (b nonHTTPBouncer) Accept() (net.Conn, error) {
@@ -185,7 +191,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 
 		switch connType := conn.(type) {
 		case proxiedConnection:
-			if connType.originalDestination() == "" {
+			if connType.OriginalDestination() == "" {
 				// cannot be forwarded so we must accept the connection
 				// regardless of what protocol it speaks.
 				return conn, nil
@@ -196,6 +202,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 			if err != nil {
 				return nil, err
 			}
+			b.logger.Debug("peek: ", string(peek))
 			if httpPattern.Match(peek) {
 				// this is a connection we want to handle
 				return tlsMuxConn{
@@ -203,11 +210,16 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 					Conn:   conn,
 				}, nil
 			}
-			b.logger.Debugf("Non HTTP connection to %s detected (peek: %s), proxying instead", connType.originalDestination(), string(peek))
+			b.logger.Debugf("Non HTTP connection to %s detected (peek: %s), proxying instead", connType.OriginalDestination(), string(peek))
 
 			// proxy this connection without interception
-			destination := connType.originalDestination()
-			destConn, err := tls.Dial(conn.LocalAddr().Network(), destination, nil)
+			destination := connType.OriginalDestination()
+			var destConn net.Conn
+			if b.tls {
+				destConn, err = tls.Dial(conn.LocalAddr().Network(), destination, nil)
+			} else {
+				destConn, err = net.Dial(conn.LocalAddr().Network(), destination)
+			}
 			if err != nil {
 				b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
 			}

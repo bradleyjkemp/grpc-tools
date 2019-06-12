@@ -3,6 +3,7 @@ package grpc_proxy
 import (
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"net"
@@ -11,18 +12,21 @@ import (
 	"strings"
 )
 
-func newHttpServer(grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func(net.Conn, string)) *http.Server {
+func newHttpServer(logger *logrus.Logger, grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func(net.Conn, string)) *http.Server {
 	return &http.Server{
 		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch {
 			case r.Method == http.MethodConnect:
+				logger.Debug("Handling HTTP CONNECT request for destination ", r.URL)
 				handleConnect(w, r, internalRedirect)
 			case isGrpcRequest(grpcHandler, r):
+				logger.Debug("Handling gRPC request ", r.URL)
 				grpcHandler.ServeHTTP(w, r)
 			default:
 				// Many clients use a mix of gRPC and non-gRPC requests
 				// so must try to be as transparent as possible for normal
 				// HTTP requests by proxying the request to the original destination.
+				logger.Debugf("Reverse proxying HTTP request %s %s %s", r.Method, r.Host, r.URL)
 				httpReverseProxy.ServeHTTP(w, r)
 			}
 		}), &http2.Server{}),

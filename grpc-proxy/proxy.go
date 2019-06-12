@@ -79,8 +79,8 @@ func (s *server) Start() error {
 
 	proxyLis := newProxyListener(s.logger, listener)
 
-	httpServer := newHttpServer(grpcWebHandler, proxyLis.internalRedirect)
-	httpsServer := withHttpsMiddleware(newHttpServer(grpcWebHandler, proxyLis.internalRedirect))
+	httpServer := newHttpServer(s.logger, grpcWebHandler, proxyLis.internalRedirect)
+	httpsServer := withHttpsMiddleware(newHttpServer(s.logger, grpcWebHandler, proxyLis.internalRedirect))
 
 	httpLis, httpsLis := tlsmux.New(s.logger, proxyLis, s.x509Cert, s.tlsCert)
 

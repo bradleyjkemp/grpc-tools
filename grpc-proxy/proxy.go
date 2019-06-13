@@ -75,6 +75,7 @@ func (s *server) Start() error {
 	grpcWebHandler := grpcweb.WrapServer(
 		grpc.NewServer(s.serverOptions...),
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false), // because we are proxying
+		grpcweb.WithOriginFunc(func(_ string) bool {return true}),
 	)
 
 	proxyLis := newProxyListener(s.logger, listener)
@@ -85,6 +86,6 @@ func (s *server) Start() error {
 	httpLis, httpsLis := tlsmux.New(s.logger, proxyLis, s.x509Cert, s.tlsCert)
 
 	// the TLSMux unwraps TLS for us so we use Serve instead of ServeTLS
-	go httpsServer.Serve(httpsLis)
+	go httpsServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
 	return httpServer.Serve(httpLis)
 }

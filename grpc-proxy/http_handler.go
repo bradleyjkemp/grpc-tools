@@ -65,8 +65,7 @@ var httpReverseProxy = &httputil.ReverseProxy{
 }
 
 func isGrpcRequest(server *grpcweb.WrappedGrpcServer, r *http.Request) bool {
-	return server.IsAcceptableGrpcCorsRequest(r) || // CORS request from browser
-		server.IsGrpcWebRequest(r) || // gRPC-Web request from browser
+	return server.IsGrpcWebRequest(r) || // gRPC-Web request from browser
 		r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") // Standard gRPC request
 }
 

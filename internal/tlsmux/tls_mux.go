@@ -87,18 +87,16 @@ func New(logger *logrus.Logger, listener net.Listener, cert *x509.Certificate, t
 		}
 	}()
 	closer := &sync.Once{}
-	nonTlsListener := nonHTTPBouncer{logger, &tlsMuxListener{
+	nonTlsListener := &tlsMuxListener{
 		parent: listener,
 		close:  closer,
 		conns:  nonTlsConns,
-	}, false}
-	tlsListener := nonHTTPBouncer{logger, tls.NewListener(&tlsMuxListener{
+	}
+	tlsListener := &tlsMuxListener{
 		parent: listener,
 		close:  closer,
 		conns:  tlsConns,
-	}, &tls.Config{
-		Certificates: []tls.Certificate{tlsCert},
-	}), true}
+	}
 	return nonTlsListener, tlsListener
 }
 
@@ -125,6 +123,7 @@ func handleTlsConn(logger *logrus.Logger, conn net.Conn, cert *x509.Certificate,
 			destConn, err := net.Dial(conn.LocalAddr().Network(), connType.OriginalDestination())
 			if err != nil {
 				logger.WithError(err).Warnf("Failed proxying connection to %s, Error while dialing.", originalHostname)
+				return
 			}
 			go func() {
 				err = forwardConnection(

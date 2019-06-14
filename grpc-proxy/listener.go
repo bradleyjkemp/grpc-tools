@@ -18,14 +18,14 @@ func (p proxiedConn) OriginalDestination() string {
 // listens on a net.Listener as well as a channel for internal redirects
 // while preserving original destination
 type proxyListener struct {
-	logger  *logrus.Logger
+	logger  logrus.FieldLogger
 	channel chan net.Conn
 	errs    chan error
 	net.Listener
 	once sync.Once
 }
 
-func newProxyListener(logger *logrus.Logger, listener net.Listener) *proxyListener {
+func newProxyListener(logger logrus.FieldLogger, listener net.Listener) *proxyListener {
 	return &proxyListener{
 		logger:   logger,
 		channel:  make(chan net.Conn),

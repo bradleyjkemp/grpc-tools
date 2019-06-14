@@ -15,7 +15,7 @@ import (
 type server struct {
 	serverOptions []grpc.ServerOption
 	grpcServer    *grpc.Server
-	logger        *logrus.Logger
+	logger        logrus.FieldLogger
 
 	port     int
 	certFile string
@@ -30,9 +30,10 @@ type server struct {
 }
 
 func New(configurators ...Configurator) (*server, error) {
+	logger := logrus.New()
 	s := &server{
 		connPool: internal.NewConnPool(),
-		logger:   logrus.New(),
+		logger:   logger,
 	}
 	s.serverOptions = []grpc.ServerOption{
 		grpc.CustomCodec(NoopCodec{}),              // Allows for passing raw []byte messages around
@@ -47,7 +48,7 @@ func New(configurators ...Configurator) (*server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.logger.SetLevel(level)
+	logger.SetLevel(level)
 
 	if s.certFile != "" && s.keyFile != "" {
 		var err error

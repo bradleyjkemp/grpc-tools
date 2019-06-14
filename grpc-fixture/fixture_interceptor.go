@@ -16,7 +16,7 @@ func (f fixture) intercept(srv interface{}, ss grpc.ServerStream, info *grpc.Str
 	}
 
 	for {
-		// posibility that server sends the first method
+		// possibility that server sends the first method
 		serverFirst := len(messageTreeNode.nextMessages) > 0
 		for _, message := range messageTreeNode.nextMessages {
 			serverFirst = serverFirst && message.origin == internal.ServerMessage
@@ -44,13 +44,18 @@ func (f fixture) intercept(srv interface{}, ss grpc.ServerStream, info *grpc.Str
 			if err != nil {
 				return err
 			}
+			var found bool
 			for _, message := range messageTreeNode.nextMessages {
 				if message.origin == internal.ClientMessage && message.raw == string(receivedMessage) {
 					// found the matching message so recurse deeper into the tree
 					messageTreeNode = message
-
+					found = true
 					break
 				}
+			}
+
+			if !found {
+				return status.Error(codes.Unavailable, "no matching saved responses for method "+info.FullMethod)
 			}
 		}
 

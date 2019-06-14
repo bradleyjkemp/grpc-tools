@@ -63,7 +63,7 @@ func (c tlsMuxConn) OriginalDestination() string {
 	}
 }
 
-func New(logger *logrus.Logger, listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {
+func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {
 	var nonTlsConns = make(chan net.Conn, 1)
 	var nonTlsErrs = make(chan error, 1)
 	var tlsConns = make(chan net.Conn, 1)
@@ -100,7 +100,7 @@ func New(logger *logrus.Logger, listener net.Listener, cert *x509.Certificate, t
 	return nonTlsListener, tlsListener
 }
 
-func handleTlsConn(logger *logrus.Logger, conn net.Conn, cert *x509.Certificate, tlsConns chan net.Conn) {
+func handleTlsConn(logger logrus.FieldLogger, conn net.Conn, cert *x509.Certificate, tlsConns chan net.Conn) {
 	logger.Debugf("Handling TLS connection %v", conn)
 	switch connType := conn.(type) {
 	case proxiedConnection:
@@ -166,7 +166,7 @@ func isTlsConn(conn net.Conn) (net.Conn, bool, error) {
 // to the original destination.
 // This is a single purpose version of github.com/soheilhy/cmux
 type nonHTTPBouncer struct {
-	logger *logrus.Logger
+	logger logrus.FieldLogger
 	net.Listener
 	tls bool
 }

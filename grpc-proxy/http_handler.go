@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-func newHttpServer(logger *logrus.Logger, grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func(net.Conn, string)) *http.Server {
+func newHttpServer(logger logrus.FieldLogger, grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func(net.Conn, string)) *http.Server {
 	return &http.Server{
 		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch {
@@ -21,6 +21,13 @@ func newHttpServer(logger *logrus.Logger, grpcHandler *grpcweb.WrappedGrpcServer
 				handleConnect(w, r, internalRedirect)
 			case isGrpcRequest(grpcHandler, r):
 				logger.Debug("Handling gRPC request ", r.URL)
+				// This request may be a gRPC-Web request that came in on HTTP/1.X
+				// So delete any legacy headers that will cause gRPC to break
+				// I don't really know why this works but without these lines the integration tests fail
+				// with error:
+				// Bad Request: HTTP status code 400; transport: received the unexpected content-type \"text/plain; charset=utf-8\"
+				r.Header.Del("Connection")
+				r.Header.Del("Proxy-Connection")
 				grpcHandler.ServeHTTP(w, r)
 			default:
 				// Many clients use a mix of gRPC and non-gRPC requests
@@ -41,7 +48,7 @@ func handleConnect(w http.ResponseWriter, r *http.Request, internalRedirect func
 	}
 	clientConn, _, err := hijacker.Hijack()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		// TODO: log error here
 		return
 	}
 	clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))

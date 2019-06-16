@@ -68,10 +68,10 @@ func (c tlsMuxConn) OriginalDestination() string {
 }
 
 func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {
-	var nonTlsConns = make(chan net.Conn, 1)
-	var nonTlsErrs = make(chan error, 1)
-	var tlsConns = make(chan net.Conn, 1)
-	var tlsErrs = make(chan error, 1)
+	var nonTlsConns = make(chan net.Conn, 128) // TODO decide on good buffer sizes for these channels
+	var nonTlsErrs = make(chan error, 128)
+	var tlsConns = make(chan net.Conn, 128)
+	var tlsErrs = make(chan error, 128)
 	go func() {
 		for {
 			rawConn, err := listener.Accept()
@@ -127,12 +127,12 @@ func handleTlsConn(logger logrus.FieldLogger, conn net.Conn, cert *x509.Certific
 		} else {
 			// cannot intercept so will just transparently proxy instead
 			logger.Infof("No certificate able to intercept connections to %s, proxying instead.", originalHostname)
-			destConn, err := net.Dial(conn.LocalAddr().Network(), connType.OriginalDestination())
-			if err != nil {
-				logger.WithError(err).Warnf("Failed proxying connection to %s, Error while dialing.", originalHostname)
-				return
-			}
 			go func() {
+				destConn, err := net.Dial(conn.LocalAddr().Network(), connType.OriginalDestination())
+				if err != nil {
+					logger.WithError(err).Warnf("Failed proxying connection to %s, Error while dialing.", originalHostname)
+					return
+				}
 				err = forwardConnection(
 					conn,
 					destConn,

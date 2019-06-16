@@ -18,7 +18,7 @@ import (
 // of the connection and seeing if it looks like a TLS handshake.
 
 type tlsMuxListener struct {
-	parent net.Listener
+	net.Listener
 	close  *sync.Once
 	conns  <-chan net.Conn
 	errs   <-chan error
@@ -36,18 +36,22 @@ func (c *tlsMuxListener) Accept() (net.Conn, error) {
 func (c *tlsMuxListener) Close() error {
 	var err error
 	c.close.Do(func() {
-		err = c.parent.Close()
+		err = c.Listener.Close()
 	})
 	return err
-}
-
-func (c *tlsMuxListener) Addr() net.Addr {
-	return c.parent.Addr()
 }
 
 type tlsMuxConn struct {
 	reader io.Reader
 	net.Conn
+}
+
+func (c tlsMuxConn) RemoteAddr() net.Addr {
+	if c.Conn == nil || c.Conn.RemoteAddr() == nil {
+		panic("tlsMux nil conn")
+	}
+
+	return c.Conn.RemoteAddr()
 }
 
 func (c tlsMuxConn) Read(b []byte) (n int, err error) {
@@ -78,7 +82,10 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 			}
 
 			conn, isTls, err := isTlsConn(rawConn)
-
+			if err != nil {
+				nonTlsErrs <- err
+				tlsErrs <- err
+			}
 			if isTls {
 				handleTlsConn(logger, conn, cert, tlsConns)
 			} else {
@@ -88,12 +95,12 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 	}()
 	closer := &sync.Once{}
 	nonTlsListener := &tlsMuxListener{
-		parent: listener,
+		Listener: listener,
 		close:  closer,
 		conns:  nonTlsConns,
 	}
 	tlsListener := &tlsMuxListener{
-		parent: listener,
+		Listener: listener,
 		close:  closer,
 		conns:  tlsConns,
 	}
@@ -152,7 +159,7 @@ func isTlsConn(conn net.Conn) (net.Conn, bool, error) {
 	peeker := bufio.NewReaderSize(conn, tlsPeekSize)
 	peek, err := peeker.Peek(tlsPeekSize)
 	if err != nil {
-		return tlsMuxConn{}, false, err
+		return nil, false, err
 	}
 
 	return tlsMuxConn{
@@ -221,6 +228,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 			}
 			if err != nil {
 				b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
+				continue
 			}
 
 			go func() {

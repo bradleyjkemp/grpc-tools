@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/tlsmux"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
@@ -36,7 +37,7 @@ func New(configurators ...Configurator) (*server, error) {
 		logger:   logger,
 	}
 	s.serverOptions = []grpc.ServerOption{
-		grpc.CustomCodec(NoopCodec{}),              // Allows for passing raw []byte messages around
+		grpc.CustomCodec(codec.NoopCodec{}),        // Allows for passing raw []byte messages around
 		grpc.UnknownServiceHandler(s.proxyHandler), // All services are unknown so will be proxied
 	}
 
@@ -76,7 +77,7 @@ func (s *server) Start() error {
 	grpcWebHandler := grpcweb.WrapServer(
 		grpc.NewServer(s.serverOptions...),
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false), // because we are proxying
-		grpcweb.WithOriginFunc(func(_ string) bool {return true}),
+		grpcweb.WithOriginFunc(func(_ string) bool { return true }),
 	)
 
 	proxyLis := newProxyListener(s.logger, listener)

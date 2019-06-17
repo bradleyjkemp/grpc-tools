@@ -16,7 +16,7 @@ type proxiedConnection interface {
 }
 
 func (p *Peeker) OriginalDestination() string {
-		switch underlying := p.Conn.(type) {
+	switch underlying := p.Conn.(type) {
 	case proxiedConnection:
 		return underlying.OriginalDestination()
 	default:

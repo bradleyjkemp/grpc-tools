@@ -3,6 +3,7 @@ package grpc_proxy
 import (
 	"context"
 	"fmt"
+	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -50,7 +51,7 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	}
 
 	options := []grpc.DialOption{
-		grpc.WithDefaultCallOptions(grpc.ForceCodec(NoopCodec{})),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NoopCodec{})),
 		grpc.WithBlock(),
 	}
 	if marker.IsTLSRPC(md) {

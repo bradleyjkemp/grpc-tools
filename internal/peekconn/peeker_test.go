@@ -12,10 +12,10 @@ var (
 )
 
 func TestPeeker(t *testing.T) {
-	cases := map[string]struct{
-		data string
+	cases := map[string]struct {
+		data  string
 		regex *regexp.Regexp
-		len int
+		len   int
 		match bool
 	}{
 		"no match": {

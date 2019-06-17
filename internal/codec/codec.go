@@ -1,4 +1,4 @@
-package grpc_proxy
+package codec
 
 type NoopCodec struct{}
 

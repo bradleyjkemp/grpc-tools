@@ -19,9 +19,9 @@ import (
 
 type tlsMuxListener struct {
 	net.Listener
-	close  *sync.Once
-	conns  <-chan net.Conn
-	errs   <-chan error
+	close *sync.Once
+	conns <-chan net.Conn
+	errs  <-chan error
 }
 
 func (c *tlsMuxListener) Accept() (net.Conn, error) {
@@ -102,13 +102,13 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 	closer := &sync.Once{}
 	nonTlsListener := &tlsMuxListener{
 		Listener: listener,
-		close:  closer,
-		conns:  nonTlsConns,
+		close:    closer,
+		conns:    nonTlsConns,
 	}
 	tlsListener := &tlsMuxListener{
 		Listener: listener,
-		close:  closer,
-		conns:  tlsConns,
+		close:    closer,
+		conns:    tlsConns,
 	}
 	return nonTlsListener, tlsListener
 }

@@ -10,26 +10,26 @@ type mockConn struct {
 	*bytes.Buffer
 }
 
-func ( mockConn) Close() error {
+func (mockConn) Close() error {
 	panic("implement me")
 }
 
-func ( mockConn) LocalAddr() net.Addr {
+func (mockConn) LocalAddr() net.Addr {
 	panic("implement me")
 }
 
-func ( mockConn) RemoteAddr() net.Addr {
+func (mockConn) RemoteAddr() net.Addr {
 	panic("implement me")
 }
 
-func ( mockConn) SetDeadline(t time.Time) error {
+func (mockConn) SetDeadline(t time.Time) error {
 	panic("implement me")
 }
 
-func ( mockConn) SetReadDeadline(t time.Time) error {
+func (mockConn) SetReadDeadline(t time.Time) error {
 	panic("implement me")
 }
 
-func ( mockConn) SetWriteDeadline(t time.Time) error {
+func (mockConn) SetWriteDeadline(t time.Time) error {
 	panic("implement me")
 }

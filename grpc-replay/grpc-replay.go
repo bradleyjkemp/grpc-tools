@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -111,7 +111,7 @@ func getConnection(md metadata.MD) (*grpc.ClientConn, error) {
 	}
 
 	options := []grpc.DialOption{
-		grpc.WithDefaultCallOptions(grpc.ForceCodec(grpc_proxy.NoopCodec{})),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NoopCodec{})),
 		grpc.WithBlock(),
 	}
 

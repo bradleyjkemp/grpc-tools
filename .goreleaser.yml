@@ -1,0 +1,51 @@
+before:
+  hooks:
+    - go mod download
+
+env:
+  - GO111MODULE=on
+
+builds:
+- &common
+  goos:
+    - darwin
+    - windows
+    - linux
+  goarch:
+    - amd64
+  ldflags:
+    - -s -w -X github.com/bradleyjkemp/grpc-tools/internal/versionflag.version={{.Version}}
+  id: grpc-dump
+  binary: grpc-dump
+  main: ./grpc-dump
+- <<: *common
+  id: grpc-fixture
+  binary: grpc-fixture
+  main: ./grpc-fixture
+- <<: *common
+  id: grpc-replay
+  binary: grpc-replay
+  main: ./grpc-replay
+- <<: *common
+  id: grpc-view
+  binary: grpc-view
+  main: ./grpc-view
+
+brews:
+-
+  github:
+    owner: bradleyjkemp
+    name: homebrew-formulae
+  homepage: "https://github.com/bradleyjkemp/grpc-tools"
+  description: "A suite of gRPC debugging tools. Like Fiddler/Charles but for gRPC."
+
+archives:
+- replacements:
+    darwin: macOS
+    linux: Linux
+    windows: Windows
+  format: zip
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"

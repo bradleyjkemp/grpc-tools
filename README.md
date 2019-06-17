@@ -15,11 +15,17 @@ This repository currently includes:
 These tools are in alpha so expect breaking changes between releases. See the [changelog](CHANGELOG.md) for full details.
 
 ### Installation:
-Fetch the tools using:
+The recommended way to install these tools is via [Homebrew](https://brew.sh/) using:
+```bash
+brew install bradleyjkemp/formulae/grpc-tools
+```
+
+Alternatively, binaries can be downloaded from the GitHub [releases page](https://github.com/bradleyjkemp/grpc-tools/releases/latest).
+
+Or you can build the tools from source using:
 ```bash
 go install github.com/bradleyjkemp/grpc-tools/...
 ```
-All the tools in this repository will now be installed to your `$GOPATH/bin` or `$GOBIN` directory.
 
 ## grpc-dump
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_descriptor"
+	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
 	"github.com/jhump/protoreflect/desc"
 	"os"
 	"strings"

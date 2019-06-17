@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
+	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
 	"github.com/rivo/tview"
 	"io"
 	"os"

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
+	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
 	"os"
 )
 

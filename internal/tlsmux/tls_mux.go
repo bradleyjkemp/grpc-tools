@@ -1,9 +1,9 @@
 package tlsmux
 
 import (
-	"bufio"
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/bradleyjkemp/grpc-tools/internal/peekconn"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net"
@@ -81,18 +81,24 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 				continue
 			}
 
-			conn, isTls, err := isTlsConn(rawConn)
-			if err != nil {
-				nonTlsErrs <- err
-				tlsErrs <- err
-			}
-			if isTls {
-				handleTlsConn(logger, conn, cert, tlsConns)
-			} else {
-				nonTlsConns <- conn
-			}
+			go func() {
+				conn := &peekconn.Peeker{Conn: rawConn}
+
+				isTls, err := conn.PeekMatch(tlsPattern, tlsPeekSize)
+				if err != nil {
+					nonTlsErrs <- err
+					tlsErrs <- err
+				}
+				if isTls {
+					handleTlsConn(logger, conn, cert, tlsConns)
+				} else {
+					nonTlsConns <- conn
+				}
+			}()
+
 		}
 	}()
+
 	closer := &sync.Once{}
 	nonTlsListener := &tlsMuxListener{
 		Listener: listener,
@@ -109,64 +115,50 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 
 func handleTlsConn(logger logrus.FieldLogger, conn net.Conn, cert *x509.Certificate, tlsConns chan net.Conn) {
 	logger.Debugf("Handling TLS connection %v", conn)
-	switch connType := conn.(type) {
-	case proxiedConnection:
-		if connType.OriginalDestination() == "" {
-			logger.Debug("Connection has no original destination so must intercept")
-			// cannot be forwarded so must accept regardless of whether we are able to intercept
-			tlsConns <- conn
-			return
-		}
-		logger.Debugf("Got TLS connection for destination %s", connType.OriginalDestination())
 
-		// trim the port suffix
-		originalHostname := strings.Split(connType.OriginalDestination(), ":")[0]
-		if cert != nil && cert.VerifyHostname(originalHostname) == nil {
-			// the certificate we have allows us to intercept this connection
-			tlsConns <- conn
-		} else {
-			// cannot intercept so will just transparently proxy instead
-			logger.Infof("No certificate able to intercept connections to %s, proxying instead.", originalHostname)
-			go func() {
-				destConn, err := net.Dial(conn.LocalAddr().Network(), connType.OriginalDestination())
-				if err != nil {
-					logger.WithError(err).Warnf("Failed proxying connection to %s, Error while dialing.", originalHostname)
-					return
-				}
-				err = forwardConnection(
-					conn,
-					destConn,
-				)
-				if err != nil {
-					logger.WithError(err).Warnf("Error proxying connection to %s.", originalHostname)
-				}
-			}()
-		}
-
-	default:
+	proxConn, ok := conn.(proxiedConnection)
+	if !ok {
 		tlsConns <- conn
+		return
+	}
+
+	if proxConn.OriginalDestination() == "" {
+		logger.Debug("Connection has no original destination so must intercept")
+		// cannot be forwarded so must accept regardless of whether we are able to intercept
+		tlsConns <- conn
+		return
+	}
+
+	logger.Debugf("Got TLS connection for destination %s", proxConn.OriginalDestination())
+
+	// trim the port suffix
+	originalHostname := strings.Split(proxConn.OriginalDestination(), ":")[0]
+	if cert != nil && cert.VerifyHostname(originalHostname) == nil {
+		// the certificate we have allows us to intercept this connection
+		tlsConns <- conn
+		return
+	}
+
+	// cannot intercept so will just transparently proxy instead
+	logger.Infof("No certificate able to intercept connections to %s, proxying instead.", originalHostname)
+	destConn, err := net.Dial(conn.LocalAddr().Network(), proxConn.OriginalDestination())
+	if err != nil {
+		logger.WithError(err).Warnf("Failed proxying connection to %s, Error while dialing.", originalHostname)
+		return
+	}
+	err = forwardConnection(
+		conn,
+		destConn,
+	)
+	if err != nil {
+		logger.WithError(err).Warnf("Error proxying connection to %s.", originalHostname)
 	}
 }
 
 var (
-	tlsPattern  = regexp.MustCompile(`^\x16\x03[\00-\x03]`) // TLS handshake byte + version number
+	tlsPattern  = regexp.MustCompile(`^\x16\x03[\x00-\x03]`) // TLS handshake byte + version number
 	tlsPeekSize = 3
 )
-
-// Takes a net.Conn and peeks to see if it is a TLS conn or not.
-// The original net.Conn *cannot* be used after calling.
-func isTlsConn(conn net.Conn) (net.Conn, bool, error) {
-	peeker := bufio.NewReaderSize(conn, tlsPeekSize)
-	peek, err := peeker.Peek(tlsPeekSize)
-	if err != nil {
-		return nil, false, err
-	}
-
-	return tlsMuxConn{
-		reader: peeker,
-		Conn:   conn,
-	}, tlsPattern.Match(peek), nil
-}
 
 // nonHTTPBouncer wraps a net.Listener and detects whether or not
 // the connection is HTTP. If not then it proxies the connection
@@ -189,61 +181,49 @@ type proxiedConnection interface {
 }
 
 func (b nonHTTPBouncer) Accept() (net.Conn, error) {
-	for {
-		conn, err := b.Listener.Accept()
-		if err != nil {
-			return nil, err
-		}
-
-		switch connType := conn.(type) {
-		case proxiedConnection:
-			if connType.OriginalDestination() == "" {
-				// cannot be forwarded so we must accept the connection
-				// regardless of what protocol it speaks.
-				return conn, nil
-			}
-
-			peeker := bufio.NewReaderSize(conn, httpPeekSize)
-			peek, err := peeker.Peek(httpPeekSize)
-			if err != nil {
-				return nil, err
-			}
-			b.logger.Debug("peek: ", string(peek))
-			if httpPattern.Match(peek) {
-				// this is a connection we want to handle
-				return tlsMuxConn{
-					reader: peeker,
-					Conn:   conn,
-				}, nil
-			}
-			b.logger.Debugf("Non HTTP connection to %s detected (peek: %s), proxying instead", connType.OriginalDestination(), string(peek))
-
-			// proxy this connection without interception
-			destination := connType.OriginalDestination()
-			var destConn net.Conn
-			if b.tls {
-				destConn, err = tls.Dial(conn.LocalAddr().Network(), destination, nil)
-			} else {
-				destConn, err = net.Dial(conn.LocalAddr().Network(), destination)
-			}
-			if err != nil {
-				b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
-				continue
-			}
-
-			go func() {
-				err := forwardConnection(
-					conn,
-					destConn,
-				)
-				if err != nil {
-					b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
-				}
-			}()
-
-		default:
-			// unknown (direct?) connection, must handle it ourselves
-			return conn, nil
-		}
+	conn, err := b.Listener.Accept()
+	if err != nil {
+		return nil, err
 	}
+
+	proxConn, ok := conn.(proxiedConnection)
+	if !ok || proxConn.OriginalDestination() == "" {
+		// unknown (direct?) connection, must handle it ourselves
+		return conn, nil
+	}
+
+	peekedConn := &peekconn.Peeker{Conn: conn}
+	match, err := peekedConn.PeekMatch(httpPattern, httpPeekSize)
+	if err != nil {
+		return nil, err
+	}
+	if match {
+		// this is a connection we want to handle
+		return peekedConn, nil
+	}
+
+	// proxy this connection without interception
+	go func() {
+		destination := proxConn.OriginalDestination()
+		var destConn net.Conn
+		if b.tls {
+			destConn, err = tls.Dial(conn.LocalAddr().Network(), destination, nil)
+		} else {
+			destConn, err = net.Dial(conn.LocalAddr().Network(), destination)
+		}
+		if err != nil {
+			b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
+			return
+		}
+
+		err := forwardConnection(
+			conn,
+			destConn,
+		)
+		if err != nil {
+			b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
+		}
+	}()
+
+	return b.Accept()
 }

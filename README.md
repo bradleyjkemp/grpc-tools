@@ -1,11 +1,13 @@
 # grpc-tools [![CircleCI](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master.svg?style=svg)](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master) ![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/bradleyjkemp/grpc-tools.svg?label=version)
 
-A suite of tools for gRPC debugging and development.
+A suite of tools for gRPC debugging and development. Like [Fiddler](https://www.telerik.com/fiddler)/[Charles](https://www.charlesproxy.com/) but for gRPC!
+
+The primary tool is `grpc-dump` which transparently intercepts network traffic and logs all gRPC and gRPC-Web requests as a JSON stream. You can then use this for this like debugging exactly what requests your application is making and exactly what responses the server returns.
 
 ![demo](demo.svg "Simple grpc-dump demo")
 
-Tools include:
-* [`grpc-dump`](#grpc-dump): a small gRPC proxy that dumps RPC details for debugging, later analysis/replay.
+This repository currently includes:
+* [`grpc-dump`](#grpc-dump): a small gRPC proxy that dumps RPC details to a file for debugging, and later analysis/replay.
 * [`grpc-replay`](grpc-replay): takes the output from `grpc-dump` and replays requests to the server.
 * [`grpc-fixture`](#grpc-fixture): a proxy that takes the output from `grpc-dump` and replays saved responses to client requests.
 * [`grpc-proxy`](grpc-proxy): a library for writing gRPC intercepting proxies. `grpc-dump` and `grpc-fixture` are both built on top of this library.
@@ -31,6 +33,7 @@ HTTP_PROXY=localhost:12345 my-app
 
 # all the requests made by the application will be logged to standard output in the grpc-dump window e.g.
 # {"service": "echo", "method": "Hi", "messages": ["....."] }
+# JSON will be logged to STDOUT and any info or warning messages will be logged to STDERR
 ```
 
 Many applications expect to talk to a gRPC server over TLS. For this you need to use the `--key` and `--cert` flags to point `grpc-dump` to certificates valid for the domains your application connects to. The recommended way to generate these files is via the excellent [`mkcert`](https://github.com/FiloSottile/mkcert) tool:

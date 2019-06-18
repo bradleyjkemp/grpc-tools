@@ -42,7 +42,9 @@ HTTP_PROXY=localhost:12345 my-app
 # JSON will be logged to STDOUT and any info or warning messages will be logged to STDERR
 ```
 
-Many applications expect to talk to a gRPC server over TLS. For this you need to use the `--key` and `--cert` flags to point `grpc-dump` to certificates valid for the domains your application connects to. The recommended way to generate these files is via the excellent [`mkcert`](https://github.com/FiloSottile/mkcert) tool:
+Many applications expect to talk to a gRPC server over TLS. For this you need to use the `--key` and `--cert` flags to point `grpc-dump` to certificates valid for the domains your application connects to.
+
+The recommended way to generate these files is via the excellent [`mkcert`](https://github.com/FiloSottile/mkcert) tool. `grpc-dump` will automatically use any `mkcert` generated certificates in the current directory.
 ```bash
 # Configure your system to trust mkcert certificates
 mkcert -install
@@ -51,6 +53,8 @@ mkcert -install
 mkcert mydomain.com *.mydomain.com
 
 # Start grpc-dump using the key and certificate created by mkcert
+# Or start grpc-dump from the same directory and it will
+# detect them automatically
 grpc-dump --key=mydomain.com-key.pem --cert=mydomain.com.pem
 ```
 

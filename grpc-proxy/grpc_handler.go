@@ -30,12 +30,16 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 	authority := md.Get(":authority")
 	var destinationAddr string
 	switch {
+	case s.destination != "":
+		// used hardcoded destination if set (used by clients not supporting HTTP proxies)
+		destinationAddr = s.destination
+
 	case len(authority) > 0:
 		// use authority from request
+		// TODO: verify that this destination doesn't resolve to the proxy itself
+		// to avoid an infinite proxy loop
 		destinationAddr = authority[0]
-	case s.destination != "":
-		// fallback to hardcoded destination (used by clients not supporting HTTP proxies)
-		destinationAddr = s.destination
+
 	default:
 		// no destination can be determined so just error
 		return status.Error(codes.Unimplemented, "no proxy destination configured")

@@ -2,7 +2,7 @@
 
 A suite of tools for gRPC debugging and development. Like [Fiddler](https://www.telerik.com/fiddler)/[Charles](https://www.charlesproxy.com/) but for gRPC!
 
-The primary tool is `grpc-dump` which transparently intercepts network traffic and logs all gRPC and gRPC-Web requests as a JSON stream. You can then use this for this like debugging exactly what requests your application is making and exactly what responses the server returns.
+The main tool is `grpc-dump` which transparently intercepts network traffic and logs all gRPC and gRPC-Web requests with full metadata as a JSON [stream](grpc-dump/README.md#JSON-stream-output). This stream is easily readable as it is or you can use tools like [`jq`](https://stedolan.github.io/jq/) for more complex visualisation.
 
 ![demo](demo.svg "Simple grpc-dump demo")
 
@@ -29,7 +29,11 @@ go install github.com/bradleyjkemp/grpc-tools/...
 
 ## grpc-dump
 
-Basic example:
+`grpc-dump` lets you see all of the gRPC requests being made by applications on your machine without any code changes required to applications or servers.
+
+Simply start `grpc-dump` and configure your system/application to use it as a HTTP(S) proxy. You'll soon see requests logged in full as a JSON stream with service and method names.
+
+Even if you don't have the original `.proto` files, `grpc-dump` will attempt to deserialise messages heuristically to give a human readable form.
 ```bash
 # start the proxy (leave out the --port flag to automatically pick on)
 grpc-dump --port=12345
@@ -58,11 +62,10 @@ mkcert mydomain.com *.mydomain.com
 grpc-dump --key=mydomain.com-key.pem --cert=mydomain.com.pem
 ```
 
-More details for using `grpc-dump` can be found [here](grpc-dump/README.md).
+More details for using `grpc-dump` (including the specification for the JSON output) can be found [here](grpc-dump/README.md).
 
 ## grpc-fixture
 
-Basic example:
 ```bash
 # save the (stdout) output of grpc-dump to a file
 grpc-dump --port=12345 > my-app.dump

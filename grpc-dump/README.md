@@ -25,6 +25,36 @@ Usage of grpc-dump:
     	A comma separated list of directories to search for gRPC service definitions.
 ```
 
+## JSON stream output
+
+The output of `grpc-dump` is split between stdout and stderr. Messages designed for humans (e.g. info and warning logs) are written to stderr while the machine-readable JSON stream is written to stdout.
+
+The JSON stream is a newline separated list of JSON objects (designed to be easily processed by tools like [`jq`](https://stedolan.github.io/jq/)).
+
+Each message has the format:
+```json
+{
+  "service" : "gRPC Service name",
+  "method" : "gRPC Method name",
+  "messages" : [
+    {
+      "message_origin" : "server|client",
+      "raw_message" : "base64 encoded bytes of the raw protobuf",
+      "message" : {
+        // The parsed representation of the message
+      }
+    }
+  ],
+  "error" : { // present if the gRPC status is not OK
+    "code" : 2,
+    "message" : "the gRPC error message"
+  },
+  "metadata" : { // the metadata present in the gRPC context
+    "metadataKey" : ["metadataValue"]
+  }
+}
+```
+
 ## Troubleshooting
 
 For troubleshooting see the generic `grpc-proxy` troubleshooting steps [here](../grpc-proxy/README.md).

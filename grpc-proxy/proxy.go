@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
+	"github.com/bradleyjkemp/grpc-tools/internal/detectcert"
 	"github.com/bradleyjkemp/grpc-tools/internal/tlsmux"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
@@ -51,6 +52,13 @@ func New(configurators ...Configurator) (*server, error) {
 	}
 	logger.SetLevel(level)
 
+	if s.certFile == "" && s.keyFile == "" {
+		s.certFile, s.keyFile, err = detectcert.Detect()
+		if err != nil {
+			s.logger.WithError(err).Info("Failed to detect certificates")
+		}
+	}
+
 	if s.certFile != "" && s.keyFile != "" {
 		var err error
 		s.tlsCert, err = tls.LoadX509KeyPair(s.certFile, s.keyFile)
@@ -73,6 +81,11 @@ func (s *server) Start() error {
 		return fmt.Errorf("failed to listen on port (%d): %v", s.port, err)
 	}
 	s.logger.Infof("Listening on %s", listener.Addr())
+	if s.x509Cert != nil {
+		s.logger.Infof("Intercepting TLS connections to domains: %s", s.x509Cert.DNSNames)
+	} else {
+		s.logger.Infof("Not intercepting TLS connections")
+	}
 
 	grpcWebHandler := grpcweb.WrapServer(
 		grpc.NewServer(s.serverOptions...),

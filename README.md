@@ -1,4 +1,4 @@
-# grpc-tools [![CircleCI](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master.svg?style=svg)](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master) ![GitHub release](https://img.shields.io/github/release/bradleyjkemp/grpc-tools.svg)
+# grpc-tools [![CircleCI](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master.svg?style=svg)](https://circleci.com/gh/bradleyjkemp/grpc-tools/tree/master) [![GitHub release](https://img.shields.io/github/release/bradleyjkemp/grpc-tools.svg)](https://github.com/bradleyjkemp/grpc-tools/releases/latest)
 
 A suite of tools for gRPC debugging and development. Like [Fiddler](https://www.telerik.com/fiddler)/[Charles](https://www.charlesproxy.com/) but for gRPC!
 

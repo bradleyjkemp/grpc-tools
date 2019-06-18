@@ -32,7 +32,7 @@ The output of `grpc-dump` is split between stdout and stderr. Messages designed 
 The JSON stream is a newline separated list of JSON objects (designed to be easily processed by tools like [`jq`](https://stedolan.github.io/jq/)).
 
 Each message has the format:
-```json
+```json5
 {
   "service" : "gRPC Service name",
   "method" : "gRPC Method name",

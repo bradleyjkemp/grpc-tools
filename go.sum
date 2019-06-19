@@ -24,6 +24,8 @@ github.com/improbable-eng/grpc-web v0.9.6 h1:B8FH/k5xv/vHovSt70GJHIB2/1+4plmvtfr
 github.com/improbable-eng/grpc-web v0.9.6/go.mod h1:6hRR09jOEG81ADP5wCQju1z71g6OL4eEvELdran/3cs=
 github.com/jhump/protoreflect v1.4.1 h1:tgahjuElRiJthp9JfaMUFxabBVIytT/lnMSadY5kMjM=
 github.com/jhump/protoreflect v1.4.1/go.mod h1:gZ3i/BeD62fjlaIL0VW4UDMT70CTX+3m4pOnAlJ0BX8=
+github.com/jhump/protoreflect v1.4.2 h1:g5ljR1kXk0XM49b+BbRJmm9qhuQ5y3Va9rBZWkiLvgo=
+github.com/jhump/protoreflect v1.4.2/go.mod h1:gZ3i/BeD62fjlaIL0VW4UDMT70CTX+3m4pOnAlJ0BX8=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1 h1:mweAR1A6xJ3oS2pRaGiHgQ4OO8tzTaLawm8vnODuwDk=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/lucasb-eyer/go-colorful v1.0.2 h1:mCMFu6PgSozg9tDNMMK3g18oJBX7oYGrC09mS6CXfO4=

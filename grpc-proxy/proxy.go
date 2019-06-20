@@ -76,11 +76,12 @@ func New(configurators ...Configurator) (*server, error) {
 }
 
 func (s *server) Start() error {
-	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", s.port))
+	var err error
+	s.listener, err = net.Listen("tcp", fmt.Sprintf("localhost:%d", s.port))
 	if err != nil {
 		return fmt.Errorf("failed to listen on port (%d): %v", s.port, err)
 	}
-	s.logger.Infof("Listening on %s", listener.Addr())
+	s.logger.Infof("Listening on %s", s.listener.Addr())
 	if s.x509Cert != nil {
 		s.logger.Infof("Intercepting TLS connections to domains: %s", s.x509Cert.DNSNames)
 	} else {
@@ -93,7 +94,7 @@ func (s *server) Start() error {
 		grpcweb.WithOriginFunc(func(_ string) bool { return true }),
 	)
 
-	proxyLis := newProxyListener(s.logger, listener)
+	proxyLis := newProxyListener(s.logger, s.listener)
 
 	httpServer := newHttpServer(s.logger, grpcWebHandler, proxyLis.internalRedirect)
 	httpsServer := withHttpsMiddleware(newHttpServer(s.logger, grpcWebHandler, proxyLis.internalRedirect))

@@ -23,7 +23,7 @@ func AddLoopCheck(md metadata.MD, proxyID string) error {
 	parts := strings.Split(via[0], ",")
 	for _, part := range parts {
 		if part == viaValue {
-			return status.Error(codes.Internal, "proxy loop detected")
+			return status.Error(codes.Internal, fmt.Sprintf("proxy loop detected, request already handled by %s", proxyID))
 		}
 	}
 

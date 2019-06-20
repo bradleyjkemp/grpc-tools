@@ -27,33 +27,6 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 		return status.Error(codes.Unknown, "could not extract metadata from request")
 	}
 
-	authority := md.Get(":authority")
-	var destinationAddr string
-	switch {
-	case s.destination != "":
-		// used hardcoded destination if set (used by clients not supporting HTTP proxies)
-		destinationAddr = s.destination
-
-	case len(authority) > 0:
-		// use authority from request
-		// TODO: verify that this destination doesn't resolve to the proxy itself
-		// to avoid an infinite proxy loop
-		destinationAddr = authority[0]
-
-	default:
-		// no destination can be determined so just error
-		return status.Error(codes.Unimplemented, "no proxy destination configured")
-	}
-
-	// if this a gRPC-Web connection then it doesn't have a port so we add the default
-	if !strings.Contains(destinationAddr, ":") {
-		if marker.IsTLSRPC(md) {
-			destinationAddr = destinationAddr + ":443"
-		} else {
-			destinationAddr = destinationAddr + ":80"
-		}
-	}
-
 	options := []grpc.DialOption{
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NoopCodec{})),
 		grpc.WithBlock(),
@@ -64,6 +37,10 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 		options = append(options, grpc.WithInsecure())
 	}
 
+	destinationAddr, err := s.calculateDestination(md)
+	if err != nil {
+		return err
+	}
 	destination, err := s.connPool.GetClientConn(ss.Context(), destinationAddr, options...)
 	if err != nil {
 		return err
@@ -115,6 +92,39 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 		}
 	}
 	return grpc.Errorf(codes.Internal, "gRPC proxying should never reach this stage.")
+}
+
+func (s *server) calculateDestination(md metadata.MD) (string, error) {
+	authority := md.Get(":authority")
+	var destinationAddr string
+	switch {
+	case s.destination != "":
+		// used hardcoded destination if set (used by clients not supporting HTTP proxies)
+		destinationAddr = s.destination
+
+	case len(authority) > 0:
+		// use authority from request
+		destinationAddr = authority[0]
+
+	default:
+		// no destination can be determined so just error
+		return "", status.Error(codes.Unimplemented, "no proxy destination configured")
+	}
+
+	// if this a gRPC-Web connection then it doesn't have a port so we add the default
+	if !strings.Contains(destinationAddr, ":") {
+		if marker.IsTLSRPC(md) {
+			destinationAddr = destinationAddr + ":443"
+		} else {
+			destinationAddr = destinationAddr + ":80"
+		}
+	}
+
+	if err := marker.AddLoopCheck(md, s.listener.Addr().String()); err != nil {
+		return "", err
+	}
+
+	return destinationAddr, nil
 }
 
 func getClientCtx(serverCtx context.Context) (context.Context, context.CancelFunc) {

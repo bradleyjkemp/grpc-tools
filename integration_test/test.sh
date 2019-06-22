@@ -59,7 +59,7 @@ ALL_PROXY=localhost:16354 curl -X POST 'https://grpc-web.github.io:1234/grpc.gat
     -H 'Accept-Encoding: gzip, deflate, br' -H 'Accept-Language: en-US,en;q=0.9' -H 'custom-header-1: value1' \
     -H 'User-Agent: Mozilla/5.0' -H 'Content-Type: application/grpc-web+proto' -H 'Accept: */*' \
     -H 'X-Grpc-Web: 1' -H 'Cache-Control: no-cache' -H 'Referer: http://localhost:8081/echotest.html' \
-    -H 'Connection: keep-alive'
+    -H 'Connection: keep-alive' -H 'grpc-encoding: gzip'
 
 kill ${fixturePID}
 kill ${dumpPID}

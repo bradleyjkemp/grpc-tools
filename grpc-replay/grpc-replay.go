@@ -8,6 +8,7 @@ import (
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -98,7 +99,7 @@ RPC:
 	return nil
 }
 
-var cachedConns = internal.NewConnPool()
+var cachedConns = internal.NewConnPool(logrus.New())
 
 func getConnection(md metadata.MD) (*grpc.ClientConn, error) {
 	// if no destination override set then auto-detect from the metadata

@@ -34,7 +34,7 @@ type server struct {
 func New(configurators ...Configurator) (*server, error) {
 	logger := logrus.New()
 	s := &server{
-		connPool: internal.NewConnPool(),
+		connPool: internal.NewConnPool(logger),
 		logger:   logger,
 	}
 	s.serverOptions = []grpc.ServerOption{

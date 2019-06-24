@@ -39,6 +39,7 @@ Each message has the format:
   "messages" : [
     {
       "message_origin" : "server|client",
+      "timestamp" : "RFC3339 timestamp",
       "raw_message" : "base64 encoded bytes of the raw protobuf",
       "message" : {
         // The parsed representation of the message

@@ -66,6 +66,10 @@ kill ${dumpPID}
 
 wait
 
+# This is a terrible hack to make the test output deterministic
+# TODO: Replace this with a proper Go test!
+sed -r 's/\"timestamp\":\"[0-9TZ:.+\-]+\"/\"timestamp\":\"2019-06-24T19:19:46.644943+01:00\"/g' test-result.json > test-result.tmp && mv test-result.tmp test-result.json
+
 # Now check that the two results match
 cmp test-result.json test-golden.json || (echo "Results are different"; exit 1)
 echo "Test passes"

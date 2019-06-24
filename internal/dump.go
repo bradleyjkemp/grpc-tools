@@ -4,6 +4,7 @@ import (
 	"fmt"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/metadata"
+	"time"
 )
 
 type RPC struct {
@@ -29,4 +30,5 @@ type StreamEvent struct {
 	MessageOrigin MessageOrigin `json:"message_origin,omitempty"`
 	RawMessage    []byte        `json:"raw_message,omitempty"`
 	Message       interface{}   `json:"message,omitempty"`
+	Timestamp     time.Time     `json:"timestamp"`
 }

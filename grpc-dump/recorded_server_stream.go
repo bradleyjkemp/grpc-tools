@@ -4,6 +4,7 @@ import (
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"google.golang.org/grpc"
 	"sync"
+	"time"
 )
 
 // recordedServerStream wraps a grpc.ServerStream and allows the dump interceptor to record all sent/received messages
@@ -19,6 +20,7 @@ func (ss *recordedServerStream) SendMsg(m interface{}) error {
 	ss.events = append(ss.events, &internal.StreamEvent{
 		MessageOrigin: internal.ServerMessage,
 		RawMessage:    message,
+		Timestamp:     time.Now(),
 	})
 	ss.Unlock()
 	return ss.ServerStream.SendMsg(m)
@@ -35,6 +37,7 @@ func (ss *recordedServerStream) RecvMsg(m interface{}) error {
 	ss.events = append(ss.events, &internal.StreamEvent{
 		MessageOrigin: internal.ClientMessage,
 		RawMessage:    *message,
+		Timestamp:     time.Now(),
 	})
 	ss.Unlock()
 	return nil

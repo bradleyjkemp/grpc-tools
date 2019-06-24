@@ -24,9 +24,9 @@
                     <text x="13.026" y="1.67" class="g">git:(</text>
                     <text x="18.036" y="1.67" class="h">master</text>
                     <text x="24.048" y="1.67" class="g">)</text>
-                    <text x="26.052" y="1.67" class="e">HTTP_PROXY=localhost:13109</text>
-                    <text x="53.106" y="1.67" class="e">make</text>
-                    <text x="58.116" y="1.67" class="e">client</text>
+                    <text x="26.052" y="1.67" class="e">http_proxy=http://localhost:13109</text>
+                    <text x="60.106" y="1.67" class="e">make</text>
+                    <text x="65.116" y="1.67" class="e">client</text>
                 </symbol>
                 <symbol id="4">
                     <text y="1.67" class="e">Listening</text>

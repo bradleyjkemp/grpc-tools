@@ -54,3 +54,27 @@
     ]
   }
 }
+{
+  "service": "bradleyjkemp.github.io.TestService",
+  "method": "TestUnknownRPC",
+  "messages": [
+    {
+      "message_origin": "client",
+      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UyIAQQBA=="
+    }
+  ],
+  "metadata": {
+    ":authority": [
+      "a-different-domain.github.io:444"
+    ],
+    "content-type": [
+      "application/grpc"
+    ],
+    "forwarded": [
+      "proto=https"
+    ],
+    "user-agent": [
+      "grpc-go/1.8.2"
+    ]
+  }
+}

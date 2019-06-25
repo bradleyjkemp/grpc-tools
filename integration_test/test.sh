@@ -24,7 +24,7 @@ go build github.com/bradleyjkemp/grpc-tools/grpc-replay
 
 # grpc-fixture serves mock RPCs
 ./grpc-fixture \
-    --dump=test-fixture.json \
+    --dump=test-golden.json \
     --port=16353 \
     --cert="${certFile}" \
     --key="${keyFile}" &
@@ -41,7 +41,7 @@ sleep 1 # wait for servers to start up
 
 # grpc-replay makes request which are logged by grpc-dump and responded to by grpc-fixture
 http_proxy=localhost:16354 ./grpc-replay \
-    --dump=test-replay.json
+    --dump=test-dump.json
 
 # mimic a HTTP gRPC-Web requests
 # Adapted from: https://stackoverflow.com/questions/52839792/how-do-i-map-my-working-curl-command-into-a-grpc-web-call

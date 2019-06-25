@@ -55,7 +55,7 @@
   }
 }
 {
-  "service": "bradleyjkemp.github.io.TestService",
+  "service": "bradleyjkemp.github.io.UnknownService",
   "method": "TestUnknownRPC",
   "messages": [
     {

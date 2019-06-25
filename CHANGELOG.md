@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.2.0 (unreleased)
+## [v0.2.0](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.0)
 * Added proxy loop detection so that misconfiguration (e.g. missing/incorrent `--destination` flag) do not cause infinite loops and connection exhaustion.
 * `grpc-proxy` now supports requests with gzip compression (however requests are still proxied uncompressed).
 * `grpc-dump` now includes a timestamp along with each message sent/received.

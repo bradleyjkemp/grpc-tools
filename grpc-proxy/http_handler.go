@@ -1,8 +1,8 @@
 package grpc_proxy
 
 import (
+	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
-	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -12,7 +12,12 @@ import (
 	"strings"
 )
 
-func newHttpServer(logger logrus.FieldLogger, grpcHandler *grpcweb.WrappedGrpcServer, internalRedirect func(net.Conn, string)) *http.Server {
+type grpcWebServer interface {
+	ServeHTTP(resp http.ResponseWriter, req *http.Request)
+	IsGrpcWebRequest(req *http.Request) bool
+}
+
+func newHttpServer(logger logrus.FieldLogger, grpcHandler grpcWebServer, internalRedirect func(net.Conn, string), reverseProxy http.Handler) *http.Server {
 	return &http.Server{
 		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch {
@@ -34,7 +39,7 @@ func newHttpServer(logger logrus.FieldLogger, grpcHandler *grpcweb.WrappedGrpcSe
 				// so must try to be as transparent as possible for normal
 				// HTTP requests by proxying the request to the original destination.
 				logger.Debugf("Reverse proxying HTTP request %s %s %s", r.Method, r.Host, r.URL)
-				httpReverseProxy.ServeHTTP(w, r)
+				reverseProxy.ServeHTTP(w, r)
 			}
 		}), &http2.Server{}),
 	}
@@ -51,8 +56,12 @@ func handleConnect(w http.ResponseWriter, r *http.Request, internalRedirect func
 		// TODO: log error here
 		return
 	}
-	clientConn.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
-	internalRedirect(clientConn, r.Host)
+	_, err = fmt.Fprintf(clientConn, "%s 200 OK\r\n\r\n", r.Proto)
+	if err == nil {
+		internalRedirect(clientConn, r.Host)
+	} else {
+		_ = clientConn.Close()
+	}
 }
 
 var httpReverseProxy = &httputil.ReverseProxy{
@@ -71,7 +80,7 @@ var httpReverseProxy = &httputil.ReverseProxy{
 	},
 }
 
-func isGrpcRequest(server *grpcweb.WrappedGrpcServer, r *http.Request) bool {
+func isGrpcRequest(server grpcWebServer, r *http.Request) bool {
 	return server.IsGrpcWebRequest(r) || // gRPC-Web request from browser
 		r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") // Standard gRPC request
 }

@@ -5,6 +5,7 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
+      - run: go test ./...
       - run: go run github.com/FiloSottile/mkcert -install
       - run: cd integration_test && go run github.com/FiloSottile/mkcert "*.github.io"
       - run: integration_test/test.sh

@@ -1,0 +1,58 @@
+package grpc_proxy
+
+import (
+	"fmt"
+	"github.com/sirupsen/logrus"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+var (
+	testDestination = "test-url.example.com"
+)
+
+type stubGRPCWebHandler struct {
+	handler http.HandlerFunc
+	isGRPC  func(req *http.Request) bool
+}
+
+func (s stubGRPCWebHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	s.handler(resp, req)
+}
+
+func (s stubGRPCWebHandler) IsGrpcWebRequest(req *http.Request) bool {
+	return s.isGRPC(req)
+}
+
+func TestHTTPHandler_RedirectsCONNECT(t *testing.T) {
+	logger := logrus.New()
+	var proxiedConn net.Conn
+	var destination string
+	s := httptest.NewServer(newHttpServer(logger, nil, func(conn net.Conn, dest string) {
+		proxiedConn = conn
+		destination = dest
+	}).Handler)
+
+	clientConn, err := net.Dial(s.Listener.Addr().Network(), s.Listener.Addr().String())
+	if err != nil {
+		panic(err)
+	}
+	_, err = fmt.Fprintf(clientConn, "CONNECT %s HTTP/1.1\n\n", testDestination)
+	if err != nil {
+		panic(err)
+	}
+
+	// Must get 200 OK response
+	expectedResponse := "HTTP/1.1 200 OK\r\n\r\n"
+	resp := make([]byte, len(expectedResponse))
+	n, err := clientConn.Read(resp)
+	if n != len(expectedResponse) || string(resp) != expectedResponse {
+		panic(string(resp))
+	}
+
+	if proxiedConn == nil || destination != testDestination {
+		panic(destination)
+	}
+}

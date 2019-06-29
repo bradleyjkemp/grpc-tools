@@ -17,7 +17,7 @@ type grpcWebServer interface {
 	IsGrpcWebRequest(req *http.Request) bool
 }
 
-func newHttpServer(logger logrus.FieldLogger, grpcHandler grpcWebServer, internalRedirect func(net.Conn, string)) *http.Server {
+func newHttpServer(logger logrus.FieldLogger, grpcHandler grpcWebServer, internalRedirect func(net.Conn, string), reverseProxy http.Handler) *http.Server {
 	return &http.Server{
 		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch {
@@ -39,7 +39,7 @@ func newHttpServer(logger logrus.FieldLogger, grpcHandler grpcWebServer, interna
 				// so must try to be as transparent as possible for normal
 				// HTTP requests by proxying the request to the original destination.
 				logger.Debugf("Reverse proxying HTTP request %s %s %s", r.Method, r.Host, r.URL)
-				httpReverseProxy.ServeHTTP(w, r)
+				reverseProxy.ServeHTTP(w, r)
 			}
 		}), &http2.Server{}),
 	}

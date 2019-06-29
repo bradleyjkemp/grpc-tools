@@ -33,7 +33,7 @@ func TestHTTPHandler_RedirectsCONNECT(t *testing.T) {
 	s := httptest.NewServer(newHttpServer(logger, nil, func(conn net.Conn, dest string) {
 		proxiedConn = conn
 		destination = dest
-	}).Handler)
+	}, nil).Handler)
 
 	clientConn, err := net.Dial(s.Listener.Addr().Network(), s.Listener.Addr().String())
 	if err != nil {
@@ -67,13 +67,36 @@ func TestHTTPHandler_InterceptsGRPC(t *testing.T) {
 		isGRPC: func(_ *http.Request) bool {
 			return true
 		},
-	}, nil).Handler)
+	}, nil, nil).Handler)
 
 	_, err := http.Post(s.URL, "", nil)
 	if err != nil {
 		panic(err)
 	}
 	if !gRPCHandlerCalled {
+		panic("gRPC Handler not called")
+	}
+}
+
+func TestHTTPHandler_ReverseProxiesUnknown(t *testing.T) {
+	logger := logrus.New()
+	var reverseProxyCalled bool
+	s := httptest.NewServer(newHttpServer(logger, stubGRPCWebHandler{
+		handler: func(_ http.ResponseWriter, _ *http.Request) {
+			panic("grpc handler called")
+		},
+		isGRPC: func(_ *http.Request) bool {
+			return false
+		},
+	}, nil, http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		reverseProxyCalled = true
+	})).Handler)
+
+	_, err := http.Get(s.URL)
+	if err != nil {
+		panic(err)
+	}
+	if !reverseProxyCalled {
 		panic("gRPC Handler not called")
 	}
 }

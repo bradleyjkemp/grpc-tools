@@ -184,12 +184,11 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 		// this is a connection we want to handle
 		return peekedConn, nil
 	}
-	b.logger.Warn("Bouncing non-HTTP connection! to destination ", proxConn.OriginalDestination())
+	b.logger.Debugf("Bouncing non-HTTP connection to destination %s", proxConn.OriginalDestination())
 
 	// proxy this connection without interception
 	go func() {
 		destination := proxConn.OriginalDestination()
-		b.logger.Warn("dialing non-HTTP destination ", destination)
 		var destConn net.Conn
 		if b.tls {
 			destConn, err = tls.Dial(conn.LocalAddr().Network(), destination, nil)
@@ -200,13 +199,11 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 			b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
 			return
 		}
-		b.logger.Warn("dialed non-HTTP destination ", destination)
 
 		err := forwardConnection(
 			conn,
 			destConn,
 		)
-		b.logger.Warn("forwardConnection returned")
 		if err != nil {
 			b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
 		}

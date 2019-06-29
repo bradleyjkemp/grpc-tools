@@ -1,7 +1,6 @@
 package tlsmux
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -23,11 +22,11 @@ func forwardConnection(conn net.Conn, destConn net.Conn) error {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		io.Copy(conn, &debugReader{destConn})
+		io.Copy(conn, destConn)
 		wg.Done()
 	}()
 	go func() {
-		io.Copy(destConn, &debugReader{conn})
+		io.Copy(destConn, conn)
 		wg.Done()
 	}()
 	go func() {
@@ -39,7 +38,7 @@ func forwardConnection(conn net.Conn, destConn net.Conn) error {
 }
 
 func copyAndCloseTCP(dst, src net.Conn) {
-	io.Copy(dst, &debugReader{src})
+	io.Copy(dst, src)
 	dst.(tcpLike).CloseWrite()
 	src.(tcpLike).CloseRead()
 }
@@ -52,12 +51,14 @@ func isTCPTunnel(a, b net.Conn) bool {
 	return aTCP && bTCP
 }
 
-type debugReader struct {
-	io.Reader
-}
-
-func (d *debugReader) Read(p []byte) (n int, err error) {
-	n, err = d.Reader.Read(p)
-	fmt.Printf("[%p] Read bytes: %v, %v\n", d, string(p[:n]), err)
-	return n, err
-}
+// The following can be used to debug all traffic forwarded over a connection
+//
+//type debugReader struct {
+//	io.Reader
+//}
+//
+//func (d *debugReader) Read(p []byte) (n int, err error) {
+//	n, err = d.Reader.Read(p)
+//	fmt.Printf("[%p] Read bytes: %v, %v\n", d, string(p[:n]), err)
+//	return n, err
+//}

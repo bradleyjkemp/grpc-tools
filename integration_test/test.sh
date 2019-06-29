@@ -18,9 +18,9 @@ if [[ ! -f "$keyFile" ]]; then
 fi
 
 export GO111MODULE=on
-go build github.com/bradleyjkemp/grpc-tools/grpc-fixture
-go build github.com/bradleyjkemp/grpc-tools/grpc-dump
-go build github.com/bradleyjkemp/grpc-tools/grpc-replay
+go build -race github.com/bradleyjkemp/grpc-tools/grpc-fixture
+go build -race github.com/bradleyjkemp/grpc-tools/grpc-dump
+go build -race github.com/bradleyjkemp/grpc-tools/grpc-replay
 
 # grpc-fixture serves mock RPCs
 ./grpc-fixture \

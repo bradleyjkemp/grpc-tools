@@ -201,7 +201,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 		}
 
 		err := forwardConnection(
-			conn,
+			peekedConn,
 			destConn,
 		)
 		if err != nil {

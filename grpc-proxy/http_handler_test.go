@@ -48,6 +48,9 @@ func TestHTTPHandler_RedirectsCONNECT(t *testing.T) {
 	expectedResponse := "HTTP/1.1 200 OK\r\n\r\n"
 	resp := make([]byte, len(expectedResponse))
 	n, err := clientConn.Read(resp)
+	if err != nil {
+		panic(err)
+	}
 	if n != len(expectedResponse) || string(resp) != expectedResponse {
 		panic(string(resp))
 	}

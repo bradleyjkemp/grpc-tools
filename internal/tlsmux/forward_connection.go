@@ -1,6 +1,7 @@
 package tlsmux
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -22,11 +23,11 @@ func forwardConnection(conn net.Conn, destConn net.Conn) error {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		io.Copy(conn, destConn)
+		io.Copy(conn, &debugReader{destConn})
 		wg.Done()
 	}()
 	go func() {
-		io.Copy(destConn, conn)
+		io.Copy(destConn, &debugReader{conn})
 		wg.Done()
 	}()
 	go func() {
@@ -38,7 +39,7 @@ func forwardConnection(conn net.Conn, destConn net.Conn) error {
 }
 
 func copyAndCloseTCP(dst, src net.Conn) {
-	io.Copy(dst, src)
+	io.Copy(dst, &debugReader{src})
 	dst.(tcpLike).CloseWrite()
 	src.(tcpLike).CloseRead()
 }
@@ -46,11 +47,17 @@ func copyAndCloseTCP(dst, src net.Conn) {
 // checks if the two connections are "TCP-like"
 // i.e. the two connection halves can be close separately
 func isTCPTunnel(a, b net.Conn) bool {
-	type tcpLike interface {
-		CloseRead() error
-		CloseWrite() error
-	}
 	_, aTCP := a.(tcpLike)
 	_, bTCP := b.(tcpLike)
 	return aTCP && bTCP
+}
+
+type debugReader struct {
+	io.Reader
+}
+
+func (d *debugReader) Read(p []byte) (n int, err error) {
+	n, err = d.Reader.Read(p)
+	fmt.Printf("[%p] Read bytes: %v, %v\n", d, string(p[:n]), err)
+	return n, err
 }

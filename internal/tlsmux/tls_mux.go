@@ -55,7 +55,7 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 			}
 
 			go func() {
-				conn := &peekconn.Peeker{Conn: rawConn}
+				conn := peekconn.New(rawConn)
 
 				isTls, err := conn.PeekMatch(tlsPattern, tlsPeekSize)
 				if err != nil {
@@ -73,15 +73,25 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 	}()
 
 	closer := &sync.Once{}
-	nonTlsListener := &tlsMuxListener{
-		Listener: listener,
-		close:    closer,
-		conns:    nonTlsConns,
+	nonTlsListener := nonHTTPBouncer{
+		logger,
+		&tlsMuxListener{
+			Listener: listener,
+			close:    closer,
+			conns:    nonTlsConns,
+		},
+		false,
 	}
-	tlsListener := &tlsMuxListener{
-		Listener: listener,
-		close:    closer,
-		conns:    tlsConns,
+	tlsListener := nonHTTPBouncer{
+		logger,
+		tls.NewListener(&tlsMuxListener{
+			Listener: listener,
+			close:    closer,
+			conns:    tlsConns,
+		}, &tls.Config{
+			Certificates: []tls.Certificate{tlsCert},
+		}),
+		true,
 	}
 	return nonTlsListener, tlsListener
 }
@@ -165,7 +175,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 		return conn, nil
 	}
 
-	peekedConn := &peekconn.Peeker{Conn: conn}
+	peekedConn := peekconn.New(conn)
 	match, err := peekedConn.PeekMatch(httpPattern, httpPeekSize)
 	if err != nil {
 		return nil, err
@@ -174,10 +184,12 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 		// this is a connection we want to handle
 		return peekedConn, nil
 	}
+	b.logger.Warn("Bouncing non-HTTP connection! to destination ", proxConn.OriginalDestination())
 
 	// proxy this connection without interception
 	go func() {
 		destination := proxConn.OriginalDestination()
+		b.logger.Warn("dialing non-HTTP destination ", destination)
 		var destConn net.Conn
 		if b.tls {
 			destConn, err = tls.Dial(conn.LocalAddr().Network(), destination, nil)
@@ -188,11 +200,13 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 			b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
 			return
 		}
+		b.logger.Warn("dialed non-HTTP destination ", destination)
 
 		err := forwardConnection(
 			conn,
 			destConn,
 		)
+		b.logger.Warn("forwardConnection returned")
 		if err != nil {
 			b.logger.WithError(err).Warnf("Error proxying connection to %s.", destination)
 		}

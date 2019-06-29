@@ -56,3 +56,24 @@ func TestHTTPHandler_RedirectsCONNECT(t *testing.T) {
 		panic(destination)
 	}
 }
+
+func TestHTTPHandler_InterceptsGRPC(t *testing.T) {
+	logger := logrus.New()
+	var gRPCHandlerCalled bool
+	s := httptest.NewServer(newHttpServer(logger, stubGRPCWebHandler{
+		handler: func(_ http.ResponseWriter, _ *http.Request) {
+			gRPCHandlerCalled = true
+		},
+		isGRPC: func(_ *http.Request) bool {
+			return true
+		},
+	}, nil).Handler)
+
+	_, err := http.Post(s.URL, "", nil)
+	if err != nil {
+		panic(err)
+	}
+	if !gRPCHandlerCalled {
+		panic("gRPC Handler not called")
+	}
+}

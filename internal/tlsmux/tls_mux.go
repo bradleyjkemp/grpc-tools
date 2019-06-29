@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"github.com/bradleyjkemp/grpc-tools/internal/peekconn"
 	"github.com/sirupsen/logrus"
-	"io"
 	"net"
 	"regexp"
 	"strings"
@@ -39,32 +38,6 @@ func (c *tlsMuxListener) Close() error {
 		err = c.Listener.Close()
 	})
 	return err
-}
-
-type tlsMuxConn struct {
-	reader io.Reader
-	net.Conn
-}
-
-func (c tlsMuxConn) RemoteAddr() net.Addr {
-	if c.Conn == nil || c.Conn.RemoteAddr() == nil {
-		panic("tlsMux nil conn")
-	}
-
-	return c.Conn.RemoteAddr()
-}
-
-func (c tlsMuxConn) Read(b []byte) (n int, err error) {
-	return c.reader.Read(b)
-}
-
-func (c tlsMuxConn) OriginalDestination() string {
-	switch underlying := c.Conn.(type) {
-	case proxiedConnection:
-		return underlying.OriginalDestination()
-	default:
-		return ""
-	}
 }
 
 func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {

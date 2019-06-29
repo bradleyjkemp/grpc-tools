@@ -1,11 +1,15 @@
 version: 2
+orbs:
+  codecov: codecov/codecov@1.0.2
 jobs:
   build:
     docker:
       - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: go test ./...
+      - run: go test -cover -coverprofile=coverage.out ./...
+      - codecov/upload:
+          file: coverage.out
       - run: go run github.com/FiloSottile/mkcert -install
       - run: cd integration_test && go run github.com/FiloSottile/mkcert "*.github.io"
       - run: integration_test/test.sh

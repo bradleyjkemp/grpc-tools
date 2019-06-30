@@ -19,12 +19,12 @@ type peeker struct {
 }
 
 func New(underlying net.Conn) *peeker {
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	return &peeker{
+	p := &peeker{
 		Conn: underlying,
-		wg:   wg,
+		wg:   sync.WaitGroup{},
 	}
+	p.wg.Add(2)
+	return p
 }
 
 func (p *peeker) CloseRead() error {

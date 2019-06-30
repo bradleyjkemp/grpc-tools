@@ -1,13 +1,46 @@
 package proto_decoder
 
-//
-//type fileMessageResolver struct {
-//}
-//
-//func NewFileResolver(protoFileRoots ...string) *fileMessageResolver {
-//	return nil
-//}
-//
-//func NewDescriptorResolver(protoFileDescriptors ...string) *descriptorMessageResolver {
-//
-//}
+import (
+	"fmt"
+	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/proto_descriptor"
+	"github.com/jhump/protoreflect/desc"
+)
+
+type descriptorResolver struct {
+	methodDescriptors map[string]*desc.MethodDescriptor
+}
+
+func (d *descriptorResolver) resolve(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error) {
+	if descriptor, ok := d.methodDescriptors[fullMethod]; ok {
+		switch direction {
+		case internal.ClientMessage:
+			return descriptor.GetInputType(), nil
+		case internal.ServerMessage:
+			return descriptor.GetOutputType(), nil
+		}
+	}
+	return nil, fmt.Errorf("method not known")
+}
+
+func NewFileResolver(protoFileRoots ...string) (*descriptorResolver, error) {
+	descs, err := proto_descriptor.LoadProtoDirectories(protoFileRoots...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &descriptorResolver{
+		descs,
+	}, nil
+}
+
+func NewDescriptorResolver(protoFileDescriptors ...string) (*descriptorResolver, error) {
+	descs, err := proto_descriptor.LoadProtoDescriptors(protoFileDescriptors...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &descriptorResolver{
+		descs,
+	}, nil
+}

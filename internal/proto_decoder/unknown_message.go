@@ -2,6 +2,7 @@ package proto_decoder
 
 import (
 	"fmt"
+	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/jhump/protoreflect/desc"
@@ -24,7 +25,7 @@ func NewUnknownResolver() *unknownMessageResolver {
 	}
 }
 
-func (u *unknownMessageResolver) resolve(fullMethod string, raw []byte) (*desc.MessageDescriptor, error) {
+func (u *unknownMessageResolver) resolve(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error) {
 	dyn, _ := dynamic.AsDynamicMessage(&empty.Empty{})
 	err := proto.Unmarshal(raw, dyn)
 	if err != nil {

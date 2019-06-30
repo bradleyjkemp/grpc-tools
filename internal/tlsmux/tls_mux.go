@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"github.com/bradleyjkemp/grpc-tools/internal/peekconn"
 	"github.com/sirupsen/logrus"
-	"io"
 	"net"
 	"regexp"
 	"strings"
@@ -41,32 +40,6 @@ func (c *tlsMuxListener) Close() error {
 	return err
 }
 
-type tlsMuxConn struct {
-	reader io.Reader
-	net.Conn
-}
-
-func (c tlsMuxConn) RemoteAddr() net.Addr {
-	if c.Conn == nil || c.Conn.RemoteAddr() == nil {
-		panic("tlsMux nil conn")
-	}
-
-	return c.Conn.RemoteAddr()
-}
-
-func (c tlsMuxConn) Read(b []byte) (n int, err error) {
-	return c.reader.Read(b)
-}
-
-func (c tlsMuxConn) OriginalDestination() string {
-	switch underlying := c.Conn.(type) {
-	case proxiedConnection:
-		return underlying.OriginalDestination()
-	default:
-		return ""
-	}
-}
-
 func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificate, tlsCert tls.Certificate) (net.Listener, net.Listener) {
 	var nonTlsConns = make(chan net.Conn, 128) // TODO decide on good buffer sizes for these channels
 	var nonTlsErrs = make(chan error, 128)
@@ -82,7 +55,7 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 			}
 
 			go func() {
-				conn := &peekconn.Peeker{Conn: rawConn}
+				conn := peekconn.New(rawConn)
 
 				isTls, err := conn.PeekMatch(tlsPattern, tlsPeekSize)
 				if err != nil {
@@ -100,15 +73,25 @@ func New(logger logrus.FieldLogger, listener net.Listener, cert *x509.Certificat
 	}()
 
 	closer := &sync.Once{}
-	nonTlsListener := &tlsMuxListener{
-		Listener: listener,
-		close:    closer,
-		conns:    nonTlsConns,
+	nonTlsListener := nonHTTPBouncer{
+		logger,
+		&tlsMuxListener{
+			Listener: listener,
+			close:    closer,
+			conns:    nonTlsConns,
+		},
+		false,
 	}
-	tlsListener := &tlsMuxListener{
-		Listener: listener,
-		close:    closer,
-		conns:    tlsConns,
+	tlsListener := nonHTTPBouncer{
+		logger,
+		tls.NewListener(&tlsMuxListener{
+			Listener: listener,
+			close:    closer,
+			conns:    tlsConns,
+		}, &tls.Config{
+			Certificates: []tls.Certificate{tlsCert},
+		}),
+		true,
 	}
 	return nonTlsListener, tlsListener
 }
@@ -192,7 +175,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 		return conn, nil
 	}
 
-	peekedConn := &peekconn.Peeker{Conn: conn}
+	peekedConn := peekconn.New(conn)
 	match, err := peekedConn.PeekMatch(httpPattern, httpPeekSize)
 	if err != nil {
 		return nil, err
@@ -201,6 +184,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 		// this is a connection we want to handle
 		return peekedConn, nil
 	}
+	b.logger.Debugf("Bouncing non-HTTP connection to destination %s", proxConn.OriginalDestination())
 
 	// proxy this connection without interception
 	go func() {
@@ -217,7 +201,7 @@ func (b nonHTTPBouncer) Accept() (net.Conn, error) {
 		}
 
 		err := forwardConnection(
-			conn,
+			peekedConn,
 			destConn,
 		)
 		if err != nil {

@@ -102,7 +102,14 @@ func (s *server) Start() error {
 
 	httpLis, httpsLis := tlsmux.New(s.logger, proxyLis, s.x509Cert, s.tlsCert)
 
-	// the TLSMux unwraps TLS for us so we use Serve instead of ServeTLS
-	go httpsServer.ServeTLS(httpsLis, s.certFile, s.keyFile)
-	return httpServer.Serve(httpLis)
+	errChan := make(chan error)
+	go func() {
+		errChan <- httpServer.Serve(httpLis)
+	}()
+	go func() {
+		// the TLSMux unwraps TLS for us so we use Serve instead of ServeTLS
+		errChan <- httpsServer.Serve(httpsLis)
+	}()
+
+	return <-errChan
 }

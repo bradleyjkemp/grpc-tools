@@ -34,7 +34,7 @@ func TestPeeker(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			conn := &peeker{Conn: mockConn{bytes.NewBufferString(tc.data)}}
+			conn := New(mockConn{bytes.NewBufferString(tc.data)})
 			match, err := conn.PeekMatch(tc.regex, tc.len)
 			if err != nil {
 				t.Fatal("unexpected error:", err)
@@ -64,7 +64,7 @@ func TestPeeker(t *testing.T) {
 }
 
 func TestMultiplePeekers(t *testing.T) {
-	conn := &peeker{Conn: mockConn{bytes.NewBufferString("Hello world!")}}
+	conn := New(mockConn{bytes.NewBufferString("Hello world!")})
 	match, err := conn.PeekMatch(regexp.MustCompile("Hell"), 4)
 	if err != nil {
 		t.Fatal("unexpected error:", err)
@@ -73,7 +73,7 @@ func TestMultiplePeekers(t *testing.T) {
 		t.Fatalf("mismatch, expected true but got false")
 	}
 
-	conn = &peeker{Conn: conn}
+	conn = New(conn)
 	match, err = conn.PeekMatch(regexp.MustCompile("Hello"), 5)
 	if err != nil {
 		t.Fatal("unexpected error:", err)

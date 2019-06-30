@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 	"google.golang.org/grpc"
@@ -41,8 +41,11 @@ func dumpInterceptor(knownMethods map[string]*desc.MethodDescriptor) grpc.Stream
 
 		knownMethod := knownMethods[info.FullMethod]
 		for _, message := range rpc.Messages {
-			dyn, _ := dynamic.AsDynamicMessage(&empty.Empty{})
-			if knownMethod != nil {
+			var dyn *dynamic.Message
+			if knownMethod == nil {
+				dec := proto_decoder.NewDecoder(proto_decoder.NewUnknownResolver())
+				dyn, err = dec.Decode(info.FullMethod, message.RawMessage)
+			} else {
 				// have proper type information so e.g. can have field names in the text representation
 				switch message.MessageOrigin {
 				case internal.ClientMessage:
@@ -56,20 +59,6 @@ func dumpInterceptor(knownMethods map[string]*desc.MethodDescriptor) grpc.Stream
 				fmt.Fprintf(os.Stderr, "failed to unmarshal message: %v\n", err)
 			}
 
-			if knownMethod == nil {
-				unknownMessage, err := generateDescriptorForUnknownMessage(dyn).Build()
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "failed to decode unknown message: %v\n", err)
-					continue
-				}
-				dyn = dynamic.NewMessage(unknownMessage)
-				// now unmarshal again using the new generated message type
-				err = proto.Unmarshal(message.RawMessage, dyn)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "failed to unmarshal message: %v\n", err)
-					continue
-				}
-			}
 			message.Message = dyn
 		}
 

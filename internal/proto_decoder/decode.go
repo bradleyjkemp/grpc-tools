@@ -10,15 +10,15 @@ import (
 type MessageResolver interface {
 	// takes an encoded message and finds a message descriptor for it
 	// so it can be unmarshalled into an object
-	resolveEncoded(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error)
+	resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error)
 
 	// takes a message object and finds a message descriptor for it
 	// so it can be marshalled back into bytes
-	resolveDecoded(fullMethod string, direction internal.MessageOrigin, message interface{}) (*desc.MessageDescriptor, error)
+	resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error)
 }
 
 type MessageDecoder interface {
-	Decode(fullMethod string, direction internal.MessageOrigin, raw []byte) (*dynamic.Message, error)
+	Decode(fullMethod string, message *internal.Message) (*dynamic.Message, error)
 }
 
 type messageDecoder struct {
@@ -34,17 +34,17 @@ func NewDecoder(resolvers ...MessageResolver) *messageDecoder {
 	}
 }
 
-func (d *messageDecoder) Decode(fullMethod string, direction internal.MessageOrigin, raw []byte) (*dynamic.Message, error) {
+func (d *messageDecoder) Decode(fullMethod string, message *internal.Message) (*dynamic.Message, error) {
 	var err error
 	for _, resolver := range d.resolvers {
 		var descriptor *desc.MessageDescriptor
-		descriptor, err = resolver.resolveEncoded(fullMethod, direction, raw)
+		descriptor, err = resolver.resolveEncoded(fullMethod, message)
 		if err != nil {
 			continue
 		}
 		dyn := dynamic.NewMessage(descriptor)
 		// now unmarshal again using the new generated message type
-		err = proto.Unmarshal(raw, dyn)
+		err = proto.Unmarshal(message.RawMessage, dyn)
 		if err == nil {
 			return dyn, nil
 		}

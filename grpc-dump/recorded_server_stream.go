@@ -11,13 +11,13 @@ import (
 type recordedServerStream struct {
 	sync.Mutex
 	grpc.ServerStream
-	events []*internal.StreamEvent
+	events []*internal.Message
 }
 
 func (ss *recordedServerStream) SendMsg(m interface{}) error {
 	message := m.([]byte)
 	ss.Lock()
-	ss.events = append(ss.events, &internal.StreamEvent{
+	ss.events = append(ss.events, &internal.Message{
 		MessageOrigin: internal.ServerMessage,
 		RawMessage:    message,
 		Timestamp:     time.Now(),
@@ -34,7 +34,7 @@ func (ss *recordedServerStream) RecvMsg(m interface{}) error {
 	// now m is populated
 	message := m.(*[]byte)
 	ss.Lock()
-	ss.events = append(ss.events, &internal.StreamEvent{
+	ss.events = append(ss.events, &internal.Message{
 		MessageOrigin: internal.ClientMessage,
 		RawMessage:    *message,
 		Timestamp:     time.Now(),

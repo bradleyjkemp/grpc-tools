@@ -36,7 +36,7 @@ func dumpInterceptor(decoder proto_decoder.MessageDecoder) grpc.StreamServerInte
 		}
 
 		for _, message := range rpc.Messages {
-			message.Message, err = decoder.Decode(info.FullMethod, message.MessageOrigin, message.RawMessage)
+			message.Message, err = decoder.Decode(info.FullMethod, message)
 			// TODO: log warning if error occurs here
 		}
 

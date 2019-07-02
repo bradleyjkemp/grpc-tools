@@ -93,20 +93,9 @@ RPC:
 
 		fmt.Print(streamName, "...")
 		for _, message := range rpc.Messages {
-			var msgBytes []byte
-			switch {
-			case message.Message == nil && message.RawMessage != nil:
-				msgBytes = message.RawMessage
-
-			case message.Message != nil:
-				msgBytes, err = encoder.Encode(streamName, message.MessageOrigin, message.Message)
-				if err != nil {
-					// TODO: add warning here
-					msgBytes = message.RawMessage
-				}
-
-			case message.Message == nil && message.RawMessage == nil:
-				return fmt.Errorf("no message available: both Message and RawMessage are nil")
+			msgBytes, err := encoder.Encode(streamName, message)
+			if err != nil {
+				return fmt.Errorf("failed to encode message: %v", err)
 			}
 
 			switch message.MessageOrigin {

@@ -23,7 +23,29 @@ func NewEncoder(resolvers ...MessageResolver) *messageEncoder {
 	}
 }
 
-func (d *messageEncoder) Encode(fullMethod string, direction internal.MessageOrigin, message interface{}) ([]byte, error) {
+func (d *messageEncoder) Encode(fullMethod string, message *internal.Message) ([]byte, error) {
+	switch {
+	case message.Message == nil && message.RawMessage != nil:
+		return message.RawMessage, nil
+
+	case message.Message != nil && message.RawMessage != nil:
+		msgBytes, err := d.encodeFromHumanReadable(fullMethod, message)
+		if err != nil {
+			// TODO: log warning here
+			return message.RawMessage, nil
+		}
+		return msgBytes, nil
+
+	case message.Message != nil && message.RawMessage == nil:
+		// Not possible to fall back to using the raw message so return directly
+		return d.encodeFromHumanReadable(fullMethod, message)
+
+	default:
+		return nil, fmt.Errorf("no message available: both Message and RawMessage are nil")
+	}
+}
+
+func (d *messageEncoder) encodeFromHumanReadable(fullMethod string, message *internal.Message) ([]byte, error) {
 	if len(d.resolvers) == 0 {
 		return nil, fmt.Errorf("no resolvers available")
 	}
@@ -31,12 +53,13 @@ func (d *messageEncoder) Encode(fullMethod string, direction internal.MessageOri
 	var err error
 	for _, resolver := range d.resolvers {
 		var descriptor *desc.MessageDescriptor
-		descriptor, err = resolver.resolveDecoded(fullMethod, direction, message)
+		descriptor, err = resolver.resolveDecoded(fullMethod, message)
 		if err != nil {
 			continue
 		}
 
-		jsonMarshalled, err := json.Marshal(message)
+		var jsonMarshalled []byte
+		jsonMarshalled, err = json.Marshal(message.Message)
 		if err != nil {
 			continue
 		}

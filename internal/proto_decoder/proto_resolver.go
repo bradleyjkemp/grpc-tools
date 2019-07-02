@@ -11,13 +11,12 @@ type descriptorResolver struct {
 	methodDescriptors map[string]*desc.MethodDescriptor
 }
 
-func (d *descriptorResolver) resolveEncoded(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error) {
-	return d.resolve(fullMethod, direction)
+func (d *descriptorResolver) resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+	return d.resolve(fullMethod, message.MessageOrigin)
 }
 
-func (d *descriptorResolver) resolveDecoded(fullMethod string, direction internal.MessageOrigin, message interface{}) (*desc.MessageDescriptor, error) {
-
-	return d.resolve(fullMethod, direction)
+func (d *descriptorResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+	return d.resolve(fullMethod, message.MessageOrigin)
 }
 
 func (d *descriptorResolver) resolve(fullMethod string, direction internal.MessageOrigin) (*desc.MessageDescriptor, error) {

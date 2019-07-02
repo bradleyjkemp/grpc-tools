@@ -8,7 +8,13 @@ import (
 )
 
 type MessageResolver interface {
-	resolve(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error)
+	// takes an encoded message and finds a message descriptor for it
+	// so it can be unmarshalled into an object
+	resolveEncoded(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error)
+
+	// takes a message object and finds a message descriptor for it
+	// so it can be marshalled back into bytes
+	resolveDecoded(fullMethod string, direction internal.MessageOrigin, message interface{}) (*desc.MessageDescriptor, error)
 }
 
 type MessageDecoder interface {
@@ -32,7 +38,7 @@ func (d *messageDecoder) Decode(fullMethod string, direction internal.MessageOri
 	var err error
 	for _, resolver := range d.resolvers {
 		var descriptor *desc.MessageDescriptor
-		descriptor, err = resolver.resolve(fullMethod, direction, raw)
+		descriptor, err = resolver.resolveEncoded(fullMethod, direction, raw)
 		if err != nil {
 			continue
 		}

@@ -42,7 +42,8 @@ sleep 1 # wait for servers to start up
 
 # grpc-replay makes request which are logged by grpc-dump and responded to by grpc-fixture
 http_proxy=localhost:16354 ./grpc-replay \
-    --dump=test-dump.json
+    --dump=test-dump.json \
+    --proto_roots=.
 
 # mimic a HTTP gRPC-Web requests
 # Adapted from: https://stackoverflow.com/questions/52839792/how-do-i-map-my-working-curl-command-into-a-grpc-web-call

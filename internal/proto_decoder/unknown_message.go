@@ -25,7 +25,7 @@ func NewUnknownResolver() *unknownMessageResolver {
 	}
 }
 
-func (u *unknownMessageResolver) resolve(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error) {
+func (u *unknownMessageResolver) resolveEncoded(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error) {
 	dyn, _ := dynamic.AsDynamicMessage(&empty.Empty{})
 	err := proto.Unmarshal(raw, dyn)
 	if err != nil {
@@ -33,6 +33,10 @@ func (u *unknownMessageResolver) resolve(fullMethod string, direction internal.M
 	}
 
 	return u.generateDescriptorForUnknownMessage(dyn).Build()
+}
+
+func (u *unknownMessageResolver) resolveDecoded(fullMethod string, direction internal.MessageOrigin, message interface{}) (*desc.MessageDescriptor, error) {
+	return nil, fmt.Errorf("unimplemented")
 }
 
 var (

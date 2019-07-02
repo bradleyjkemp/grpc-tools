@@ -33,6 +33,7 @@ fixturePID=$!
 # grpc-dump will dump the requests and responses to the fixture
 http_proxy=http://localhost:16353 ./grpc-dump \
     --port=16354 \
+    --proto_roots=. \
     --cert="${certFile}" \
     --key="${keyFile}" > test-result.json &
 dumpPID=$!

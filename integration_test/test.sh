@@ -26,6 +26,7 @@ go build -race github.com/bradleyjkemp/grpc-tools/grpc-replay
 ./grpc-fixture \
     --dump=test-golden.json \
     --port=16353 \
+    --proto_roots=. \
     --cert="${certFile}" \
     --key="${keyFile}" &
 fixturePID=$!

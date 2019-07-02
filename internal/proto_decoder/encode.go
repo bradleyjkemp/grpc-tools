@@ -14,6 +14,10 @@ type messageEncoder struct {
 	resolvers []MessageResolver
 }
 
+type MessageEncoder interface {
+	Encode(fullMethod string, message *internal.Message) ([]byte, error)
+}
+
 // Chain together a number of resolvers to decode incoming messages.
 // Resolvers are in priority order, the first to return a nil error
 // is used to decode the message.

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"io"
 	"os"
 )
@@ -17,7 +18,7 @@ type messageTree struct {
 }
 
 // load fixture creates a Trie-like structure of messages
-func loadFixture(dumpPath string) (fixture, error) {
+func loadFixture(dumpPath string, encoder proto_decoder.MessageEncoder) (fixture, error) {
 	dumpFile, err := os.Open(dumpPath)
 	if err != nil {
 		return nil, err
@@ -41,9 +42,13 @@ func loadFixture(dumpPath string) (fixture, error) {
 		}
 		messageTreeNode := fixture[rpc.StreamName()]
 		for _, msg := range rpc.Messages {
+			msgBytes, err := encoder.Encode(rpc.StreamName(), msg)
+			if err != nil {
+				return nil, err
+			}
 			var foundExisting *messageTree
 			for _, nextMessage := range messageTreeNode.nextMessages {
-				if nextMessage.origin == msg.MessageOrigin && nextMessage.raw == string(msg.RawMessage) {
+				if nextMessage.origin == msg.MessageOrigin && nextMessage.raw == string(msgBytes) {
 					foundExisting = nextMessage
 					break
 				}
@@ -51,7 +56,7 @@ func loadFixture(dumpPath string) (fixture, error) {
 			if foundExisting == nil {
 				foundExisting = &messageTree{
 					origin:       msg.MessageOrigin,
-					raw:          string(msg.RawMessage),
+					raw:          string(msgBytes),
 					nextMessages: nil,
 				}
 				messageTreeNode.nextMessages = append(messageTreeNode.nextMessages, foundExisting)

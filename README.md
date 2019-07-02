@@ -39,6 +39,8 @@ Even if you don't have the original `.proto` files, `grpc-dump` will attempt to 
 grpc-dump --port=12345
 
 # in another terminal, run your application pointing it at the proxy
+# Warning: if your application connects to a localhost/127.0.0.1 address then proxy settings
+# are usually ignored. To fix this you can use a service like https://readme.localtest.me
 http_proxy=http://localhost:12345 my-app
 
 # all the requests made by the application will be logged to standard output in the grpc-dump window e.g.

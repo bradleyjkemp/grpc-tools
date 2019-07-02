@@ -1,5 +1,5 @@
 syntax = "proto3";
-package main;
+package bradleyjkemp.github.io;
 
 message Outer {
     Inner outer_value = 1;
@@ -9,4 +9,8 @@ message Outer {
 message Inner {
     string inner_value = 3;
     int64 inner_num = 4;
+}
+
+service TestService {
+    rpc TestUnaryClientRequest(Outer) returns (Outer) {};
 }

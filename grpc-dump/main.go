@@ -4,9 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
-	"github.com/bradleyjkemp/grpc-tools/internal/proto_descriptor"
+	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
-	"github.com/jhump/protoreflect/desc"
 	"os"
 	"strings"
 )
@@ -28,28 +27,26 @@ func main() {
 }
 
 func run() error {
-	var knownMethods map[string]*desc.MethodDescriptor
+	var resolvers []proto_decoder.MessageResolver
 	if *protoRoots != "" {
-		descs, err := proto_descriptor.LoadProtoDirectories(strings.Split(*protoRoots, ",")...)
+		r, err := proto_decoder.NewFileResolver(strings.Split(*protoRoots, ",")...)
 		if err != nil {
 			return err
-		} else {
-			fmt.Fprintln(os.Stderr, "Loaded", len(descs), "service descriptors")
-			knownMethods = descs
 		}
+		resolvers = append(resolvers, r)
 	}
 	if *protoDescriptors != "" {
-		descs, err := proto_descriptor.LoadProtoDescriptors(strings.Split(*protoDescriptors, ",")...)
+		r, err := proto_decoder.NewDescriptorResolver(strings.Split(*protoRoots, ",")...)
 		if err != nil {
 			return err
-		} else {
-			fmt.Fprintln(os.Stderr, "Loaded", len(descs), "service descriptors")
-			knownMethods = descs
 		}
+		resolvers = append(resolvers, r)
 	}
+	// Always use the unknown message resolver
+	resolvers = append(resolvers, proto_decoder.NewUnknownResolver())
 
 	proxy, err := grpc_proxy.New(
-		grpc_proxy.WithInterceptor(dumpInterceptor(knownMethods)),
+		grpc_proxy.WithInterceptor(dumpInterceptor(proto_decoder.NewDecoder(resolvers...))),
 		grpc_proxy.DefaultFlags(),
 	)
 	if err != nil {

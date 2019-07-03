@@ -7,6 +7,7 @@ import (
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
+	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -15,12 +16,15 @@ import (
 	"google.golang.org/grpc/metadata"
 	"io"
 	"os"
+	"strings"
 	"time"
 )
 
 var (
 	destinationOverride = flag.String("destination", "", "Destination server to forward requests to. By default the destination for each RPC is autodetected from the dump metadata.")
 	dumpPath            = flag.String("dump", "", "The gRPC dump to replay requests from")
+	protoRoots          = flag.String("proto_roots", "", "A comma separated list of directories to search for gRPC service definitions.")
+	protoDescriptors    = flag.String("proto_descriptors", "", "A comma separated list of proto descriptors to load gRPC service definitions from.")
 )
 
 func main() {
@@ -38,6 +42,22 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	var resolvers []proto_decoder.MessageResolver
+	if *protoRoots != "" {
+		r, err := proto_decoder.NewFileResolver(strings.Split(*protoRoots, ",")...)
+		if err != nil {
+			return err
+		}
+		resolvers = append(resolvers, r)
+	}
+	if *protoDescriptors != "" {
+		r, err := proto_decoder.NewDescriptorResolver(strings.Split(*protoRoots, ",")...)
+		if err != nil {
+			return err
+		}
+		resolvers = append(resolvers, r)
+	}
+	encoder := proto_decoder.NewEncoder(resolvers...)
 
 	dumpDecoder := json.NewDecoder(dumpFile)
 RPC:
@@ -73,9 +93,14 @@ RPC:
 
 		fmt.Print(streamName, "...")
 		for _, message := range rpc.Messages {
+			msgBytes, err := encoder.Encode(streamName, message)
+			if err != nil {
+				return fmt.Errorf("failed to encode message: %v", err)
+			}
+
 			switch message.MessageOrigin {
 			case internal.ClientMessage:
-				err := str.SendMsg(message.RawMessage)
+				err := str.SendMsg(msgBytes)
 				if err != nil {
 					return fmt.Errorf("failed to send message: %v", err)
 				}
@@ -86,7 +111,7 @@ RPC:
 					// TODO when do we assert on RPC errors?
 					return fmt.Errorf("failed to recv message: %v", err)
 				}
-				if string(resp) != string(message.RawMessage) {
+				if string(resp) != string(msgBytes) {
 					fmt.Println("Err mismatch")
 					continue RPC
 				}

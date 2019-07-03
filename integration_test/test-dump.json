@@ -28,6 +28,35 @@
 }
 {
   "service": "bradleyjkemp.github.io.TestService",
+  "method": "TestUnaryClientRequest",
+  "messages": [
+    {
+      "message_origin": "client",
+      "comment": "This is the same request as above, just marshalled from human readable form",
+      "message": {"outerValue":{"innerValue":"ClientRequest","innerNum":1},"outerNum":1}
+    },
+    {
+      "message_origin": "server",
+      "raw_message": "ChIaDlNlcnZlclJlc3BvbnNlIAIQAg=="
+    }
+  ],
+  "metadata": {
+    ":authority": [
+      "bradleyjkemp.github.io:444"
+    ],
+    "content-type": [
+      "application/grpc"
+    ],
+    "forwarded": [
+      "proto=http"
+    ],
+    "user-agent": [
+      "grpc-go/1.8.2"
+    ]
+  }
+}
+{
+  "service": "bradleyjkemp.github.io.TestService",
   "method": "TestStreamingServerMessages",
   "messages": [
     {

@@ -4,12 +4,16 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
+	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
 	"os"
+	"strings"
 )
 
 var (
-	dumpPath = flag.String("dump", "", "gRPC dump to serve requests from")
+	dumpPath         = flag.String("dump", "", "gRPC dump to serve requests from")
+	protoRoots       = flag.String("proto_roots", "", "A comma separated list of directories to search for gRPC service definitions.")
+	protoDescriptors = flag.String("proto_descriptors", "", "A comma separated list of proto descriptors to load gRPC service definitions from.")
 )
 
 func main() {
@@ -24,7 +28,24 @@ func main() {
 }
 
 func run() error {
-	interceptor, err := loadFixture(*dumpPath)
+	var resolvers []proto_decoder.MessageResolver
+	if *protoRoots != "" {
+		r, err := proto_decoder.NewFileResolver(strings.Split(*protoRoots, ",")...)
+		if err != nil {
+			return err
+		}
+		resolvers = append(resolvers, r)
+	}
+	if *protoDescriptors != "" {
+		r, err := proto_decoder.NewDescriptorResolver(strings.Split(*protoRoots, ",")...)
+		if err != nil {
+			return err
+		}
+		resolvers = append(resolvers, r)
+	}
+	encoder := proto_decoder.NewEncoder(resolvers...)
+
+	interceptor, err := loadFixture(*dumpPath, encoder)
 	if err != nil {
 		return err
 	}

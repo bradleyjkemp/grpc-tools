@@ -7,11 +7,11 @@ import (
 )
 
 type RPC struct {
-	Service  string         `json:"service"`
-	Method   string         `json:"method"`
-	Messages []*StreamEvent `json:"messages"`
-	Status   *Status        `json:"error,omitempty"`
-	Metadata metadata.MD    `json:"metadata"`
+	Service  string      `json:"service"`
+	Method   string      `json:"method"`
+	Messages []*Message  `json:"messages"`
+	Status   *Status     `json:"error,omitempty"`
+	Metadata metadata.MD `json:"metadata"`
 }
 
 type Status struct {
@@ -30,7 +30,7 @@ const (
 	ServerMessage MessageOrigin = "server"
 )
 
-type StreamEvent struct {
+type Message struct {
 	MessageOrigin MessageOrigin `json:"message_origin,omitempty"`
 	RawMessage    []byte        `json:"raw_message,omitempty"`
 	Message       interface{}   `json:"message,omitempty"`

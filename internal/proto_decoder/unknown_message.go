@@ -25,14 +25,18 @@ func NewUnknownResolver() *unknownMessageResolver {
 	}
 }
 
-func (u *unknownMessageResolver) resolve(fullMethod string, direction internal.MessageOrigin, raw []byte) (*desc.MessageDescriptor, error) {
+func (u *unknownMessageResolver) resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
 	dyn, _ := dynamic.AsDynamicMessage(&empty.Empty{})
-	err := proto.Unmarshal(raw, dyn)
+	err := proto.Unmarshal(message.RawMessage, dyn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal bytes: %v", err)
 	}
 
 	return u.generateDescriptorForUnknownMessage(dyn).Build()
+}
+
+func (u *unknownMessageResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+	return nil, fmt.Errorf("unimplemented")
 }
 
 var (

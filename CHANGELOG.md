@@ -2,6 +2,7 @@
 
 ## v0.2.1 (unreleased)
 * `grpc-proxy` now will transparently forward all non-HTTP traffic to the original destination [#28](https://github.com/bradleyjkemp/grpc-tools/pull/28).
+* When the `--proto_roots` or `--proto_descriptors` flags are used, `grpc-replay` and `grpc-fixture` will marshall messages from the human readable form instead of using the raw message.
 
 ## [v0.2.0](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.0)
 * Added proxy loop detection so that misconfiguration (e.g. missing/incorrent `--destination` flag) do not cause infinite loops and connection exhaustion.

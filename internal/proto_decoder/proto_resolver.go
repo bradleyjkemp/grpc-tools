@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_descriptor"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/jhump/protoreflect/desc"
 )
 
@@ -51,4 +52,14 @@ func NewDescriptorResolver(protoFileDescriptors ...string) (*descriptorResolver,
 	return &descriptorResolver{
 		descs,
 	}, nil
+}
+
+type emptyResolver struct{}
+
+func (e emptyResolver) resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+	return desc.LoadMessageDescriptorForMessage(&empty.Empty{})
+}
+
+func (e emptyResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+	return desc.LoadMessageDescriptorForMessage(&empty.Empty{})
 }

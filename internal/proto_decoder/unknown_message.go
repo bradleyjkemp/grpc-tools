@@ -14,19 +14,11 @@ import (
 // When we don't have an actual proto message descriptor, this takes a best effort
 // approach to generating one. It's definitely not perfect but is more useful than nothing.
 
-type unknownMessageResolver struct {
-	messageCounter int64 // must only be accessed atomically
-}
-
-func NewUnknownResolver() *unknownMessageResolver {
-	return &unknownMessageResolver{
-		messageCounter: 0,
-	}
-}
+type unknownFieldResolver struct{}
 
 // This takes a message descriptor and enriches it to add any unknown fields present.
 // This means that all unknown fields will show up in the dump.
-func (u *unknownMessageResolver) enrichDecodeDescriptor(resolved *desc.MessageDescriptor, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (u *unknownFieldResolver) enrichDecodeDescriptor(resolved *desc.MessageDescriptor, message *internal.Message) (*desc.MessageDescriptor, error) {
 	decoded := dynamic.NewMessage(resolved)
 	err := proto.Unmarshal(message.RawMessage, decoded)
 	if err != nil {
@@ -43,15 +35,17 @@ func (u *unknownMessageResolver) enrichDecodeDescriptor(resolved *desc.MessageDe
 	return descriptor.Build()
 }
 
-func (u *unknownMessageResolver) enrichMessage(descriptor *builder.MessageBuilder, message *dynamic.Message) error {
+func (u *unknownFieldResolver) enrichMessage(descriptor *builder.MessageBuilder, message *dynamic.Message) error {
 	for _, fieldNum := range message.GetUnknownFields() {
+		generatedFieldName := fmt.Sprintf("%s_%d", descriptor.GetName(), fieldNum)
 		unknownFieldContents := message.GetUnknownField(fieldNum)
-		fieldType, err := u.detectFieldType(unknownFieldContents)
+		fieldType, err := u.detectFieldType(generatedFieldName, unknownFieldContents)
 		if err != nil {
 			return err
 		}
-		field := builder.NewField(fmt.Sprintf("_%d", fieldNum), fieldType)
+		field := builder.NewField(generatedFieldName, fieldType)
 		field.SetNumber(fieldNum)
+		field.SetJsonName(fmt.Sprintf("%d", fieldNum))
 		if len(unknownFieldContents) > 1 {
 			field.SetRepeated()
 		}
@@ -92,7 +86,7 @@ func (u *unknownMessageResolver) enrichMessage(descriptor *builder.MessageBuilde
 	return nil
 }
 
-func (u *unknownMessageResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (u *unknownFieldResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
@@ -100,7 +94,7 @@ var (
 	asciiPattern = regexp.MustCompile(`^[ -~]*$`)
 )
 
-func (u *unknownMessageResolver) detectFieldType(fields []dynamic.UnknownField) (*builder.FieldType, error) {
+func (u *unknownFieldResolver) detectFieldType(fieldName string, fields []dynamic.UnknownField) (*builder.FieldType, error) {
 	field := fields[0]
 	switch field.Encoding {
 	// TODO: handle all wire types
@@ -125,6 +119,7 @@ func (u *unknownMessageResolver) detectFieldType(fields []dynamic.UnknownField) 
 
 		// probably is an embedded message
 		descriptor, _ := builder.FromMessage(dyn.GetMessageDescriptor())
+		descriptor.SetName(fieldName)
 		err = u.enrichMessage(descriptor, dyn)
 		if err != nil {
 			return nil, err

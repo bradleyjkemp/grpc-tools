@@ -6,6 +6,8 @@ import (
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_descriptor"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/builder"
+	"strings"
 )
 
 type descriptorResolver struct {
@@ -54,10 +56,24 @@ func NewDescriptorResolver(protoFileDescriptors ...string) (*descriptorResolver,
 	}, nil
 }
 
+var messageName = strings.NewReplacer(
+	"/", "_",
+	".", "_",
+)
+
 type emptyResolver struct{}
 
 func (e emptyResolver) resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
-	return desc.LoadMessageDescriptorForMessage(&empty.Empty{})
+	d, err := desc.LoadMessageDescriptorForMessage(&empty.Empty{})
+	if err != nil {
+		return nil, err
+	}
+	mb, err := builder.FromMessage(d)
+	if err != nil {
+		return nil, err
+	}
+	mb.SetName(fmt.Sprintf("%s_%s", messageName.Replace(fullMethod), message.MessageOrigin))
+	return mb.Build()
 }
 
 func (e emptyResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {

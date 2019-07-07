@@ -20,10 +20,11 @@ type MessageEncoder interface {
 
 // Chain together a number of resolvers to decode incoming messages.
 // Resolvers are in priority order, the first to return a nil error
-// is used to decode the message.
+// is used to decode the message. If no resolvers are successful,
+// a default resolver is used that always returns empty.Empty
 func NewEncoder(resolvers ...MessageResolver) *messageEncoder {
 	return &messageEncoder{
-		resolvers: resolvers,
+		resolvers: append(resolvers, emptyResolver{}),
 	}
 }
 

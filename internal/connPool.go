@@ -5,19 +5,24 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"net"
 	"sync"
 )
 
+type contextDialer = func(context.Context, string) (net.Conn, error)
+
 type ConnPool struct {
 	sync.Mutex
-	conns map[string]*grpc.ClientConn
+	conns  map[string]*grpc.ClientConn
 	logger logrus.FieldLogger
+	dialer contextDialer
 }
 
-func NewConnPool(logger logrus.FieldLogger) *ConnPool {
+func NewConnPool(logger logrus.FieldLogger, dialer contextDialer) *ConnPool {
 	return &ConnPool{
-		conns: map[string]*grpc.ClientConn{},
+		conns:  map[string]*grpc.ClientConn{},
 		logger: logger.WithField("", "connpool"),
+		dialer: dialer,
 	}
 }
 
@@ -42,6 +47,7 @@ func (c *ConnPool) GetClientConn(ctx context.Context, destination string, dialOp
 	}
 
 	c.logger.Debugf("Dialing new connection to %s", destination)
+	dialOptions = append(dialOptions, grpc.WithContextDialer(c.dialer))
 	conn, err := grpc.DialContext(ctx, destination, dialOptions...)
 	if err != nil {
 		c.logger.WithError(err).Debugf("Failed dialing to %s", destination)

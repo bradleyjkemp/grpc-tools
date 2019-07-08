@@ -27,6 +27,18 @@ func UsingTLS(certFile, keyFile string) Configurator {
 	}
 }
 
+func Port(port int) Configurator {
+	return func(s *server) {
+		s.port = port
+	}
+}
+
+func WithDialer(dialer ContextDialer) Configurator {
+	return func(s *server) {
+		s.dialer = dialer
+	}
+}
+
 var (
 	fPort        int
 	fCertFile    string

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
@@ -18,7 +19,9 @@ import (
 	"time"
 )
 
-func Run(protoRoots, protoDescriptors, dumpPath, destinationOverride string) error {
+func Run(protoRoots, protoDescriptors, dumpPath, destinationOverride string, dialer grpc_proxy.ContextDialer) error {
+	pool := internal.NewConnPool(logrus.New(), dialer)
+
 	dumpFile, err := os.Open(dumpPath)
 	if err != nil {
 		return err
@@ -52,7 +55,7 @@ RPC:
 			return fmt.Errorf("failed to decode dump: %s", err)
 		}
 
-		conn, err := getConnection(rpc.Metadata, destinationOverride)
+		conn, err := getConnection(pool, rpc.Metadata, destinationOverride)
 		if err != nil {
 			return fmt.Errorf("failed to connect to destination (%s): %s", destinationOverride, err)
 		}
@@ -105,9 +108,7 @@ RPC:
 	return nil
 }
 
-var cachedConns = internal.NewConnPool(logrus.New())
-
-func getConnection(md metadata.MD, destinationOverride string) (*grpc.ClientConn, error) {
+func getConnection(pool *internal.ConnPool, md metadata.MD, destinationOverride string) (*grpc.ClientConn, error) {
 	// if no destination override set then auto-detect from the metadata
 	var destination = destinationOverride
 	if destination == "" {
@@ -131,5 +132,5 @@ func getConnection(md metadata.MD, destinationOverride string) (*grpc.ClientConn
 
 	dialCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return cachedConns.GetClientConn(dialCtx, destination, options...)
+	return pool.GetClientConn(dialCtx, destination, options...)
 }

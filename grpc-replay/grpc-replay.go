@@ -4,7 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-replay/replay"
+	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/proxydialer"
 	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/net/http/httpproxy"
 	"os"
 )
 
@@ -17,7 +21,7 @@ var (
 
 func main() {
 	flag.Parse()
-	err := replay.Run(*protoRoots, *protoDescriptors, *dumpPath, *destinationOverride)
+	err := replay.Run(*protoRoots, *protoDescriptors, *dumpPath, *destinationOverride, proxydialer.NewProxyDialer(httpproxy.FromEnvironment().ProxyFunc()))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		flag.Usage()

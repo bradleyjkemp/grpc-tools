@@ -10,8 +10,7 @@ jobs:
       - run: go test -race -cover -coverprofile=unit-coverage.out ./...
       - codecov/upload:
           file: unit-coverage.out
-          flags:
-          - unit
+          flags: "unit"
   go-integration-tests:
     docker:
       - image: circleci/golang:1.12
@@ -20,8 +19,7 @@ jobs:
       - run: go test -race -tags=integration -cover -coverprofile=integration-coverage.out ./...
       - codecov/upload:
           file: integration-coverage.out
-          flags:
-          - integration
+          flags: "integration"
   integration-test:
     docker:
       - image: circleci/golang:1.12

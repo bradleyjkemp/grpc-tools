@@ -1,19 +1,24 @@
 package grpc_proxy
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/detectcert"
+	"github.com/bradleyjkemp/grpc-tools/internal/proxydialer"
 	"github.com/bradleyjkemp/grpc-tools/internal/tlsmux"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip"
 	"net"
 )
+
+type ContextDialer = func(context.Context, string) (net.Conn, error)
 
 type server struct {
 	serverOptions []grpc.ServerOption
@@ -28,6 +33,7 @@ type server struct {
 
 	destination string
 	connPool    *internal.ConnPool
+	dialer      ContextDialer
 
 	listener net.Listener
 }
@@ -35,8 +41,8 @@ type server struct {
 func New(configurators ...Configurator) (*server, error) {
 	logger := logrus.New()
 	s := &server{
-		connPool: internal.NewConnPool(logger),
-		logger:   logger,
+		logger: logger,
+		dialer: proxydialer.NewProxyDialer(httpproxy.FromEnvironment().ProxyFunc()),
 	}
 	s.serverOptions = []grpc.ServerOption{
 		grpc.CustomCodec(codec.NoopCodec{}),        // Allows for passing raw []byte messages around
@@ -47,13 +53,20 @@ func New(configurators ...Configurator) (*server, error) {
 		configurator(s)
 	}
 
-	level, err := logrus.ParseLevel(fLogLevel)
-	if err != nil {
-		return nil, err
+	// Have to initialise the connpool now because
+	// the dialer may been changed by options
+	s.connPool = internal.NewConnPool(logger, s.dialer)
+
+	if fLogLevel != "" {
+		level, err := logrus.ParseLevel(fLogLevel)
+		if err != nil {
+			return nil, err
+		}
+		logger.SetLevel(level)
 	}
-	logger.SetLevel(level)
 
 	if s.certFile == "" && s.keyFile == "" {
+		var err error
 		s.certFile, s.keyFile, err = detectcert.Detect()
 		if err != nil {
 			s.logger.WithError(err).Info("Failed to detect certificates")

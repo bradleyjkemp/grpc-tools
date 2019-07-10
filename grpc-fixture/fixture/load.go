@@ -1,4 +1,4 @@
-package main
+package fixture
 
 import (
 	"encoding/json"

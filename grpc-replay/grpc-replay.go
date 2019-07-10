@@ -4,10 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-replay/replay"
-	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/proxydialer"
 	_ "github.com/bradleyjkemp/grpc-tools/internal/versionflag"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http/httpproxy"
 	"os"
 )

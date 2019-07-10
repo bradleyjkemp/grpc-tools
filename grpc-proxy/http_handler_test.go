@@ -28,11 +28,11 @@ func (s stubGRPCWebHandler) IsGrpcWebRequest(req *http.Request) bool {
 
 func TestHTTPHandler_RedirectsCONNECT(t *testing.T) {
 	logger := logrus.New()
-	var proxiedConn net.Conn
-	var destination string
+	proxiedConn := make(chan net.Conn, 1)
+	destination := make(chan string, 1)
 	s := httptest.NewServer(newHttpServer(logger, nil, func(conn net.Conn, dest string) {
-		proxiedConn = conn
-		destination = dest
+		proxiedConn <- conn
+		destination <- dest
 	}, nil).Handler)
 
 	clientConn, err := net.Dial(s.Listener.Addr().Network(), s.Listener.Addr().String())
@@ -55,8 +55,19 @@ func TestHTTPHandler_RedirectsCONNECT(t *testing.T) {
 		panic(string(resp))
 	}
 
-	if proxiedConn == nil || destination != testDestination {
-		panic(destination)
+	select {
+	case dest := <-destination:
+		if dest != testDestination {
+			panic(dest)
+		}
+	default:
+		panic("No destination proxied")
+	}
+
+	select {
+	case <-proxiedConn:
+	default:
+		panic("No connection proxied")
 	}
 }
 

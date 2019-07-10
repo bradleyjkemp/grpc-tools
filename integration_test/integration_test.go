@@ -31,6 +31,7 @@ var (
 )
 
 func TestIntegration(t *testing.T) {
+	errors := make(chan error, 3)
 	go func() {
 		fixtureErr := fixture.Run(
 			protoRoots,
@@ -40,7 +41,7 @@ func TestIntegration(t *testing.T) {
 			grpc_proxy.UsingTLS(certFile, keyFile),
 		)
 		if fixtureErr != nil {
-			t.Fatal("Unexpected error:", fixtureErr)
+			errors <- fixtureErr
 		}
 	}()
 
@@ -59,7 +60,7 @@ func TestIntegration(t *testing.T) {
 			})),
 		)
 		if dumpErr != nil {
-			t.Fatal("Unexpected error:", dumpErr)
+			errors <- dumpErr
 		}
 	}()
 
@@ -90,6 +91,13 @@ func TestIntegration(t *testing.T) {
 	dumpLogSanitised := timestampRegex.ReplaceAll(dumpLog.Bytes(), []byte("\"timestamp\":\"2019-06-24T19:19:46.644943+01:00\""))
 
 	snapshotter.SnapshotT(t, dumpLogSanitised)
+
+	select {
+	case err := <-errors:
+		t.Fatal("Unexpected error:", err)
+	default:
+		return
+	}
 }
 
 func curlCommand(url string) *exec.Cmd {

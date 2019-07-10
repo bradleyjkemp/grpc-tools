@@ -1,3 +1,5 @@
+//+build integration
+
 package main
 
 import (
@@ -32,6 +34,15 @@ var (
 
 func TestIntegration(t *testing.T) {
 	errors := make(chan error, 3)
+	defer func() {
+		select {
+		case err := <-errors:
+			t.Fatal("Unexpected error:", err)
+		default:
+			return
+		}
+	}()
+
 	go func() {
 		fixtureErr := fixture.Run(
 			protoRoots,
@@ -91,13 +102,6 @@ func TestIntegration(t *testing.T) {
 	dumpLogSanitised := timestampRegex.ReplaceAll(dumpLog.Bytes(), []byte("\"timestamp\":\"2019-06-24T19:19:46.644943+01:00\""))
 
 	snapshotter.SnapshotT(t, dumpLogSanitised)
-
-	select {
-	case err := <-errors:
-		t.Fatal("Unexpected error:", err)
-	default:
-		return
-	}
 }
 
 func curlCommand(url string) *exec.Cmd {

@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 )
 
@@ -30,9 +31,12 @@ func TestHTTPHandler_RedirectsCONNECT(t *testing.T) {
 	logger := logrus.New()
 	proxiedConn := make(chan net.Conn, 1)
 	destination := make(chan string, 1)
+	handlerFinished := sync.WaitGroup{}
+	handlerFinished.Add(1)
 	s := httptest.NewServer(newHttpServer(logger, nil, func(conn net.Conn, dest string) {
 		proxiedConn <- conn
 		destination <- dest
+		handlerFinished.Done()
 	}, nil).Handler)
 
 	clientConn, err := net.Dial(s.Listener.Addr().Network(), s.Listener.Addr().String())
@@ -54,6 +58,8 @@ func TestHTTPHandler_RedirectsCONNECT(t *testing.T) {
 	if n != len(expectedResponse) || string(resp) != expectedResponse {
 		panic(string(resp))
 	}
+
+	handlerFinished.Wait()
 
 	select {
 	case dest := <-destination:

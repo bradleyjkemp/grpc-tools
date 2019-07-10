@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/bradleyjkemp/cupaloy/v2"
 	"github.com/bradleyjkemp/grpc-tools/grpc-dump/dump"
 	"github.com/bradleyjkemp/grpc-tools/grpc-fixture/fixture"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
@@ -9,6 +11,7 @@ import (
 	"github.com/bradleyjkemp/grpc-tools/internal/proxydialer"
 	"net/url"
 	"os/exec"
+	"regexp"
 	"testing"
 )
 
@@ -22,12 +25,17 @@ const (
 	dumpPort    = 16354
 )
 
+var (
+	timestampRegex = regexp.MustCompile(`"timestamp":"[0-9TZ:.+\-]+"`)
+	snapshotter    = cupaloy.NewDefaultConfig().WithOptions(cupaloy.SnapshotFileExtension(".json"))
+)
+
 func TestIntegration(t *testing.T) {
 	go func() {
 		fixtureErr := fixture.Run(
 			protoRoots,
 			protoDescriptors,
-			"test-golden.json",
+			".snapshots/TestIntegration.json",
 			grpc_proxy.Port(fixturePort),
 			grpc_proxy.UsingTLS(certFile, keyFile),
 		)
@@ -36,9 +44,10 @@ func TestIntegration(t *testing.T) {
 		}
 	}()
 
-	// TODO: inject http_proxy settings here
+	dumpLog := &bytes.Buffer{}
 	go func() {
 		dumpErr := dump.Run(
+			dumpLog,
 			protoRoots,
 			protoDescriptors,
 			grpc_proxy.Port(dumpPort),
@@ -78,6 +87,9 @@ func TestIntegration(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatal("Unexpected error:", err, string(out))
 	}
+	dumpLogSanitised := timestampRegex.ReplaceAll(dumpLog.Bytes(), []byte("\"timestamp\":\"2019-06-24T19:19:46.644943+01:00\""))
+
+	snapshotter.SnapshotT(t, dumpLogSanitised)
 }
 
 func curlCommand(url string) *exec.Cmd {

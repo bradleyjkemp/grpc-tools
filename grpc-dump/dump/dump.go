@@ -3,10 +3,11 @@ package dump
 import (
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
+	"io"
 	"strings"
 )
 
-func Run(protoRoots, protoDescriptors string, proxyConfig ...grpc_proxy.Configurator) error {
+func Run(output io.Writer, protoRoots, protoDescriptors string, proxyConfig ...grpc_proxy.Configurator) error {
 	var resolvers []proto_decoder.MessageResolver
 	if protoRoots != "" {
 		r, err := proto_decoder.NewFileResolver(strings.Split(protoRoots, ",")...)
@@ -25,7 +26,7 @@ func Run(protoRoots, protoDescriptors string, proxyConfig ...grpc_proxy.Configur
 	// Always use the unknown message resolver
 	resolvers = append(resolvers, proto_decoder.NewUnknownResolver())
 
-	opts := append(proxyConfig, grpc_proxy.WithInterceptor(dumpInterceptor(proto_decoder.NewDecoder(resolvers...))))
+	opts := append(proxyConfig, grpc_proxy.WithInterceptor(dumpInterceptor(output, proto_decoder.NewDecoder(resolvers...))))
 	proxy, err := grpc_proxy.New(
 		opts...,
 	)

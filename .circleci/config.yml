@@ -2,14 +2,26 @@ version: 2.1
 orbs:
   codecov: codecov/codecov@1.0.5
 jobs:
-  go-tests:
+  go-unit-tests:
     docker:
       - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: go test -cover -coverprofile=coverage.out ./...
+      - run: go test -race -cover -coverprofile=unit-coverage.out ./...
       - codecov/upload:
-          file: coverage.out
+          file: unit-coverage.out
+          flags:
+          - unit
+  go-integration-tests:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run: go test -race -tags=integration -cover -coverprofile=integration-coverage.out ./...
+      - codecov/upload:
+          file: integration-coverage.out
+          flags:
+          - integration
   integration-test:
     docker:
       - image: circleci/golang:1.12
@@ -24,5 +36,6 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - go-tests
+      - go-unit-tests
+      - go-integration-tests
       - integration-test

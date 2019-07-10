@@ -17,7 +17,7 @@ var (
 func main() {
 	grpc_proxy.RegisterDefaultFlags()
 	flag.Parse()
-	err := dump.Run(*protoRoots, *protoDescriptors, grpc_proxy.DefaultFlags())
+	err := dump.Run(os.Stdout, *protoRoots, *protoDescriptors, grpc_proxy.DefaultFlags())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		flag.Usage()

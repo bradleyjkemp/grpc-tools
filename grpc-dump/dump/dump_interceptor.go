@@ -8,11 +8,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"io"
 	"strings"
 )
 
 // dump interceptor implements a gRPC.StreamingServerInterceptor that dumps all RPC details
-func dumpInterceptor(decoder proto_decoder.MessageDecoder) grpc.StreamServerInterceptor {
+func dumpInterceptor(output io.Writer, decoder proto_decoder.MessageDecoder) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		dss := &recordedServerStream{ServerStream: ss}
 		err := handler(srv, dss)
@@ -41,7 +42,7 @@ func dumpInterceptor(decoder proto_decoder.MessageDecoder) grpc.StreamServerInte
 		}
 
 		dump, _ := json.Marshal(rpc)
-		fmt.Println(string(dump))
+		fmt.Fprintln(output, string(dump))
 		return err
 	}
 }

@@ -18,7 +18,7 @@ jobs:
       - checkout
       - run: go run github.com/FiloSottile/mkcert -install
       - run: cd integration_test && go run github.com/FiloSottile/mkcert "*.github.io"
-      - run: go test -race -tags=integration -cover -coverprofile=integration-coverage.out -coverpkg=all ./...
+      - run: go test -race -tags=integration -cover -coverprofile=integration-coverage.out -coverpkg=all ./integration_test/...
       - codecov/upload:
           file: integration-coverage.out
           flags: "integration"

@@ -9,13 +9,13 @@ import (
 	"os"
 )
 
-var (
-	dumpPath         = flag.String("dump", "", "gRPC dump to serve requests from")
-	protoRoots       = flag.String("proto_roots", "", "A comma separated list of directories to search for gRPC service definitions.")
-	protoDescriptors = flag.String("proto_descriptors", "", "A comma separated list of proto descriptors to load gRPC service definitions from.")
-)
-
 func main() {
+	var (
+		dumpPath         = flag.String("dump", "", "gRPC dump to serve requests from")
+		protoRoots       = flag.String("proto_roots", "", "A comma separated list of directories to search for gRPC service definitions.")
+		protoDescriptors = flag.String("proto_descriptors", "", "A comma separated list of proto descriptors to load gRPC service definitions from.")
+	)
+
 	grpc_proxy.RegisterDefaultFlags()
 	flag.Parse()
 	err := fixture.Run(*protoRoots, *protoDescriptors, *dumpPath, grpc_proxy.DefaultFlags())

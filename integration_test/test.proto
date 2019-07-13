@@ -11,6 +11,13 @@ message Inner {
     int64 inner_num = 4;
 }
 
+message OuterWithExtra {
+    Inner outer_value = 1;
+    int64 outer_num = 2;
+    string extra_field = 3;
+}
+
 service TestService {
     rpc TestUnaryClientRequest(Outer) returns (Outer) {};
+    rpc TestStreamingServerMessages(Outer) returns (stream Outer) {};
 }

@@ -1,0 +1,2 @@
+ignore:
+  - "**/*.pb.go" # ignore protobuf generated code

@@ -86,10 +86,6 @@ func (u *unknownFieldResolver) enrichMessage(descriptor *builder.MessageBuilder,
 	return nil
 }
 
-func (u *unknownFieldResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
-	return nil, fmt.Errorf("unimplemented")
-}
-
 var (
 	asciiPattern = regexp.MustCompile(`^[ -~]*$`)
 )

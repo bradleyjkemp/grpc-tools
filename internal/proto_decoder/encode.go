@@ -24,7 +24,8 @@ type MessageEncoder interface {
 // a default resolver is used that always returns empty.Empty
 func NewEncoder(resolvers ...MessageResolver) *messageEncoder {
 	return &messageEncoder{
-		resolvers: append(resolvers, emptyResolver{}),
+		resolvers: append(resolvers),
+		// TODO: include an unknown message encoder here
 	}
 }
 

@@ -44,7 +44,9 @@ func (u *unknownFieldResolver) enrichMessage(descriptor *builder.MessageBuilder,
 			return err
 		}
 		field := builder.NewField(generatedFieldName, fieldType)
-		field.SetNumber(fieldNum)
+		if err := field.TrySetNumber(fieldNum); err != nil {
+			return err
+		}
 		field.SetJsonName(fmt.Sprintf("%d", fieldNum))
 		if len(unknownFieldContents) > 1 {
 			field.SetRepeated()
@@ -115,7 +117,9 @@ func (u *unknownFieldResolver) detectFieldType(fieldName string, fields []dynami
 
 		// probably is an embedded message
 		descriptor, _ := builder.FromMessage(dyn.GetMessageDescriptor())
-		descriptor.SetName(fieldName)
+		if err := descriptor.TrySetName(fieldName); err != nil {
+			return nil, err
+		}
 		err = u.enrichMessage(descriptor, dyn)
 		if err != nil {
 			return nil, err

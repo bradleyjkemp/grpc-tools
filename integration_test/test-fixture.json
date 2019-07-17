@@ -1,0 +1,83 @@
+{
+  "service": "bradleyjkemp.github.io.TestService",
+  "method": "TestUnaryClientRequest",
+  "messages": [
+    {
+      "message_origin": "client",
+      "raw_message": "ChEaDUNsaWVudFJlcXVlc3QgARAB",
+      "message": {
+        "outerValue": {
+          "innerValue": "ClientRequest",
+          "innerNum": 1
+        },
+        "outerNum": 1
+      },
+      "timestamp": "2019-06-24T19:19:46.644943+01:00"
+    },
+    {
+      "message_origin": "server",
+      "raw_message": "ChIaDlNlcnZlclJlc3BvbnNlIAIQAg==",
+      "message": {
+        "outerValue": {
+          "innerValue": "ServerResponse",
+          "innerNum": 2
+        },
+        "outerNum": 2
+      },
+      "timestamp": "2019-06-24T19:19:46.644943+01:00"
+    }
+  ]
+}
+{
+  "service": "bradleyjkemp.github.io.TestService",
+  "method": "TestStreamingServerMessages",
+  "messages": [
+    {
+      "message_origin": "server",
+      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw==",
+      "message": {
+        "1": {
+          "3": "ServerMessage1",
+          "4": 3
+        },
+        "2": 3
+      },
+      "timestamp": "2019-06-24T19:19:46.644943+01:00"
+    },
+    {
+      "message_origin": "server",
+      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UyIAUQBRoORGV0ZWN0ZWQgdmFsdWU=",
+      "timestamp": "2019-06-24T19:19:46.644943+01:00"
+    }
+  ]
+}
+{
+  "service": "grpc.gateway.testing.EchoService",
+  "method": "Echo",
+  "messages": [
+    {
+      "message_origin": "server",
+      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw==",
+      "message": {
+        "1": {
+          "3": "ServerMessage1",
+          "4": 3
+        },
+        "2": 3
+      },
+      "timestamp": "2019-06-24T19:19:46.644943+01:00"
+    },
+    {
+      "message_origin": "server",
+      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw==",
+      "message": {
+        "1": {
+          "3": "ServerMessage1",
+          "4": 3
+        },
+        "2": 3
+      },
+      "timestamp": "2019-06-24T19:19:46.644943+01:00"
+    }
+  ]
+}

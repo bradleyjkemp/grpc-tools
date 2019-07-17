@@ -22,7 +22,8 @@ type MessageDecoder interface {
 }
 
 type messageDecoder struct {
-	resolvers []MessageResolver
+	resolvers    []MessageResolver
+	unknownField unknownFieldResolver
 }
 
 // Chain together a number of resolvers to decode incoming messages.
@@ -30,7 +31,8 @@ type messageDecoder struct {
 // is used to decode the message.
 func NewDecoder(resolvers ...MessageResolver) *messageDecoder {
 	return &messageDecoder{
-		resolvers: resolvers,
+		resolvers:    append(resolvers, emptyResolver{}),
+		unknownField: unknownFieldResolver{},
 	}
 }
 
@@ -42,8 +44,13 @@ func (d *messageDecoder) Decode(fullMethod string, message *internal.Message) (*
 		if err != nil {
 			continue
 		}
+		// check for any unknown fields and add them to the descriptor
+		descriptor, err := d.unknownField.enrichDecodeDescriptor(descriptor, message)
+		if err != nil {
+			continue
+		}
 		dyn := dynamic.NewMessage(descriptor)
-		// now unmarshal again using the new generated message type
+		// now unmarshal using the enriched message type
 		err = proto.Unmarshal(message.RawMessage, dyn)
 		if err == nil {
 			return dyn, nil

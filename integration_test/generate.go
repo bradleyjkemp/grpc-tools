@@ -24,4 +24,15 @@ func main() {
 
 		fmt.Println(i, val, base64.StdEncoding.EncodeToString(marshalled))
 	}
+
+	marshalled, _ := proto.Marshal(&OuterWithExtra{
+		OuterValue: &Inner{
+			InnerValue: "ServerMessage2",
+			InnerNum:   int64(4 + 1),
+		},
+		OuterNum:   int64(4 + 1),
+		ExtraField: "Detected value",
+	})
+
+	fmt.Println(4, "ServerMessage2", base64.StdEncoding.EncodeToString(marshalled))
 }

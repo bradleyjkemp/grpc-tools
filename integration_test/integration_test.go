@@ -37,7 +37,8 @@ func TestIntegration(t *testing.T) {
 	defer func() {
 		select {
 		case err := <-errors:
-			t.Fatal("Unexpected error:", err)
+			t.Log("Unexpected error:", err)
+			t.Fail()
 		default:
 			return
 		}
@@ -47,7 +48,7 @@ func TestIntegration(t *testing.T) {
 		fixtureErr := fixture.Run(
 			protoRoots,
 			protoDescriptors,
-			".snapshots/TestIntegration.json",
+			"test-fixture.json",
 			grpc_proxy.Port(fixturePort),
 			grpc_proxy.UsingTLS(certFile, keyFile),
 		)
@@ -87,17 +88,20 @@ func TestIntegration(t *testing.T) {
 		}),
 	)
 	if replayErr != nil {
-		t.Fatal("Unexpected error:", replayErr)
+		t.Log("Unexpected error:", replayErr)
+		t.Fail()
 	}
 
 	cmd := curlCommand("http://grpc-web.github.io/grpc.gateway.testing.EchoService/Echo")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatal("Unexpected error:", err, string(out))
+		t.Log("Unexpected error:", err, string(out))
+		t.Fail()
 	}
 
 	cmd = curlCommand("https://grpc-web.github.io:1234/grpc.gateway.testing.EchoService/Echo")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatal("Unexpected error:", err, string(out))
+		t.Log("Unexpected error:", err, string(out))
+		t.Fail()
 	}
 	dumpLogSanitised := timestampRegex.ReplaceAll(dumpLog.Bytes(), []byte("\"timestamp\":\"2019-06-24T19:19:46.644943+01:00\""))
 

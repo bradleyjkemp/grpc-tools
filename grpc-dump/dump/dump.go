@@ -23,8 +23,6 @@ func Run(output io.Writer, protoRoots, protoDescriptors string, proxyConfig ...g
 		}
 		resolvers = append(resolvers, r)
 	}
-	// Always use the unknown message resolver
-	resolvers = append(resolvers, proto_decoder.NewUnknownResolver())
 
 	opts := append(proxyConfig, grpc_proxy.WithInterceptor(dumpInterceptor(output, proto_decoder.NewDecoder(resolvers...))))
 	proxy, err := grpc_proxy.New(

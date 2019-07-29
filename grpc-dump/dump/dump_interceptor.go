@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -13,13 +14,13 @@ import (
 )
 
 // dump interceptor implements a gRPC.StreamingServerInterceptor that dumps all RPC details
-func dumpInterceptor(output io.Writer, decoder proto_decoder.MessageDecoder) grpc.StreamServerInterceptor {
+func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_decoder.MessageDecoder) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		dss := &recordedServerStream{ServerStream: ss}
-		err := handler(srv, dss)
+		rpcErr := handler(srv, dss)
 		var rpcStatus *internal.Status
-		if err != nil {
-			grpcStatus, _ := status.FromError(err)
+		if rpcErr != nil {
+			grpcStatus, _ := status.FromError(rpcErr)
 			rpcStatus = &internal.Status{
 				Code:    grpcStatus.Code().String(),
 				Message: grpcStatus.Message(),
@@ -36,13 +37,16 @@ func dumpInterceptor(output io.Writer, decoder proto_decoder.MessageDecoder) grp
 			Metadata: md,
 		}
 
+		var err error
 		for _, message := range rpc.Messages {
 			message.Message, err = decoder.Decode(info.FullMethod, message)
-			// TODO: log warning if error occurs here
+			if err != nil {
+				logger.WithError(err).Warn("Failed to decode message")
+			}
 		}
 
 		dump, _ := json.Marshal(rpc)
 		fmt.Fprintln(output, string(dump))
-		return err
+		return rpcErr
 	}
 }

@@ -1,6 +1,7 @@
 # Changelog
 
-## v0.2.1 (unreleased)
+## [v0.2.1](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.1)
+* Fixed bug where `grpc-dump` would not forward errors from server to client [#45](https://github.com/bradleyjkemp/grpc-tools/pull/45).
 * `grpc-proxy` now will transparently forward all non-HTTP traffic to the original destination [#28](https://github.com/bradleyjkemp/grpc-tools/pull/28).
 * When the `--proto_roots` or `--proto_descriptors` flags are used, `grpc-replay` and `grpc-fixture` will marshall messages from the human readable form instead of using the raw message.
 

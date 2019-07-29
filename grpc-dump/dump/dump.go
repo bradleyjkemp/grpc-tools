@@ -3,6 +3,7 @@ package dump
 import (
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
+	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
 )
@@ -24,7 +25,8 @@ func Run(output io.Writer, protoRoots, protoDescriptors string, proxyConfig ...g
 		resolvers = append(resolvers, r)
 	}
 
-	opts := append(proxyConfig, grpc_proxy.WithInterceptor(dumpInterceptor(output, proto_decoder.NewDecoder(resolvers...))))
+	// TODO: unify this logger with the one provided by grpc_proxy?
+	opts := append(proxyConfig, grpc_proxy.WithInterceptor(dumpInterceptor(logrus.New(), output, proto_decoder.NewDecoder(resolvers...))))
 	proxy, err := grpc_proxy.New(
 		opts...,
 	)

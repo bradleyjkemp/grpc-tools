@@ -45,7 +45,7 @@ func (d *messageDecoder) Decode(fullMethod string, message *internal.Message) (*
 			continue
 		}
 		// check for any unknown fields and add them to the descriptor
-		descriptor, err := d.unknownField.enrichDecodeDescriptor(descriptor, message)
+		descriptor, err = d.unknownField.enrichDecodeDescriptor(descriptor, message)
 		if err != nil {
 			continue
 		}

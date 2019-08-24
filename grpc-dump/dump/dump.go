@@ -26,7 +26,12 @@ func Run(output io.Writer, protoRoots, protoDescriptors string, proxyConfig ...g
 	}
 
 	// TODO: unify this logger with the one provided by grpc_proxy?
-	opts := append(proxyConfig, grpc_proxy.WithInterceptor(dumpInterceptor(logrus.New(), output, proto_decoder.NewDecoder(resolvers...))))
+	logger := logrus.New()
+	opts := append(
+		proxyConfig,
+		grpc_proxy.WithInterceptor(
+			dumpInterceptor(logger, output, proto_decoder.NewDecoder(logger, resolvers...))),
+	)
 	proxy, err := grpc_proxy.New(
 		opts...,
 	)

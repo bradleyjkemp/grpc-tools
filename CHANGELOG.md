@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.2.2](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.2)
+* Improved behaviour and logging when a message fails to be decoded [#51](https://github.com/bradleyjkemp/grpc-tools/pull/51).
+
 ## [v0.2.1](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.1)
 * Fixed bug where `grpc-dump` would not forward errors from server to client [#45](https://github.com/bradleyjkemp/grpc-tools/pull/45).
 * `grpc-proxy` now will transparently forward all non-HTTP traffic to the original destination [#28](https://github.com/bradleyjkemp/grpc-tools/pull/28).

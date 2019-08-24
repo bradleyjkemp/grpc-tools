@@ -1,7 +1,6 @@
 package proto_decoder
 
 import (
-	"errors"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
@@ -41,10 +40,6 @@ func NewDecoder(logger logrus.FieldLogger, resolvers ...MessageResolver) *messag
 }
 
 func (d *messageDecoder) Decode(fullMethod string, message *internal.Message) (*dynamic.Message, error) {
-	if len(d.resolvers) == 0 {
-		return nil, errors.New("no MessageResolvers available")
-	}
-
 	var err error
 	var descriptor *desc.MessageDescriptor
 	for _, resolver := range d.resolvers {

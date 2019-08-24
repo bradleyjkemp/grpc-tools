@@ -11,6 +11,7 @@ jobs:
       - codecov/upload:
           file: unit-coverage.out
           flags: "unit"
+
   integration-tests:
     docker:
       - image: circleci/golang:1.12
@@ -22,9 +23,25 @@ jobs:
       - codecov/upload:
           file: integration-coverage.out
           flags: "integration"
+
+  release:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run: curl -sL https://git.io/goreleaser | bash
+
 workflows:
   version: 2
   build_and_test:
     jobs:
       - unit-tests
       - integration-tests
+  release:
+    jobs:
+      - release:
+          filters:
+            branches:
+              only: master
+            tags:
+              only: /^v[0-9]+(\.[0-9]+)*/

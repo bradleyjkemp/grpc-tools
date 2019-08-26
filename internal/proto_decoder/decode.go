@@ -58,6 +58,7 @@ func (d *messageDecoder) Decode(fullMethod string, message *internal.Message) (*
 		descriptor = enrichedDescriptor
 	} else {
 		d.logger.WithError(err).Warn("Failed to search for unknown fields in message")
+		return nil, err // TODO: remove me!!!
 	}
 
 	// now unmarshal using the resolved message type

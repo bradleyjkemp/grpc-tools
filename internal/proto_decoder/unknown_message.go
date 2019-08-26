@@ -165,7 +165,14 @@ func (u *unknownFieldResolver) detectUnknownFieldType(file *builder.FileBuilder,
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to detect unknown field %s", fieldName)
 		}
-		file.AddMessage(descriptor)
+
+		if file != nil {
+			// TODO: why would file ever be nil?
+			err = file.TryAddMessage(descriptor)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to add nested message %s", fieldName)
+			}
+		}
 		return builder.FieldTypeMessage(descriptor), nil
 
 	default:

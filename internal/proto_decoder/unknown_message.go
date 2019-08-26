@@ -44,7 +44,6 @@ func (u *unknownFieldResolver) enrichDecodeDescriptor(resolved *desc.MessageDesc
 func (u *unknownFieldResolver) enrichMessage(descriptor *builder.MessageBuilder, message *dynamic.Message) error {
 	for _, fieldNum := range message.GetUnknownFields() {
 		generatedFieldName := fmt.Sprintf("%s_%d", descriptor.GetName(), fieldNum)
-		fmt.Println("Generating field name", generatedFieldName)
 		unknownFieldContents := message.GetUnknownField(fieldNum)
 		fieldType, err := u.detectUnknownFieldType(descriptor.GetFile(), generatedFieldName, unknownFieldContents)
 		if err != nil {

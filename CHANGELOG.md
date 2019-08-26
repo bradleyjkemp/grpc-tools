@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.2.3 (Unreleased)
+* Added a defer-recover handler so that any panics in the `grpc-proxy` interceptor do not kill the proxy [#53](https://github.com/bradleyjkemp/grpc-tools/pull/53).
+
 ## [v0.2.2](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.2)
 * Improved behaviour and logging when a message fails to be decoded [#51](https://github.com/bradleyjkemp/grpc-tools/pull/51).
 

@@ -4,6 +4,9 @@ import (
 	"flag"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"runtime/debug"
 )
 
 type Configurator func(*server)
@@ -16,7 +19,19 @@ func WithOptions(options ...grpc.ServerOption) Configurator {
 
 func WithInterceptor(interceptor grpc.StreamServerInterceptor) Configurator {
 	return func(s *server) {
-		s.serverOptions = append(s.serverOptions, grpc.StreamInterceptor(interceptor))
+		s.serverOptions = append(s.serverOptions, grpc.StreamInterceptor(recoverWrapper(s, interceptor)))
+	}
+}
+
+func recoverWrapper(s *server, interceptor grpc.StreamServerInterceptor) grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = status.Errorf(codes.Internal, "proxy error: %v", r)
+				s.logger.WithError(err).Warn("panic in StreamHandler: ", string(debug.Stack()))
+			}
+		}()
+		return interceptor(srv, ss, info, handler)
 	}
 }
 

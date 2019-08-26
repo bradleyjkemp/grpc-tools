@@ -84,6 +84,12 @@ func (u *unknownFieldResolver) enrichMessage(descriptor *builder.MessageBuilder,
 				// Field has no items to analyse
 				continue
 			}
+			var ok bool
+			// TODO: should iterate over all the repeated messages and merge the information
+			nestedMessage, ok = field[0].(proto.Message)
+			if !ok {
+				return fmt.Errorf("unknown: repeated field is not of type proto.Message")
+			}
 
 		default:
 			return fmt.Errorf("unknown nested field type %T", field)
@@ -121,7 +127,19 @@ var (
 func (u *unknownFieldResolver) detectUnknownFieldType(file *builder.FileBuilder, fieldName string, fields []dynamic.UnknownField) (*builder.FieldType, error) {
 	field := fields[0]
 	switch field.Encoding {
-	// TODO: handle all wire types
+	// Used for: int32, int64, uint32, uint64, sint32, sint64, bool, enum
+	case proto.WireVarint:
+		return builder.FieldTypeInt64(), nil
+
+	// Used for: fixed32, sfixed32, float
+	case proto.WireFixed32:
+		return builder.FieldTypeFloat(), nil
+
+	// Used for: fixed64, sfixed64, double
+	case proto.WireFixed64:
+		return builder.FieldTypeDouble(), nil
+
+	// Used for: string, bytes, embedded messages, packed repeated fields
 	case proto.WireBytes:
 		if asciiPattern.Match(field.Contents) {
 			// highly unlikely that an entirely ASCII string is actually an embedded proto message
@@ -151,7 +169,6 @@ func (u *unknownFieldResolver) detectUnknownFieldType(file *builder.FileBuilder,
 		return builder.FieldTypeMessage(descriptor), nil
 
 	default:
-		// Fixed precision number
-		return builder.FieldTypeFixed64(), nil
+		return nil, errors.Errorf("Unsupported wire type id %v", field.Encoding)
 	}
 }

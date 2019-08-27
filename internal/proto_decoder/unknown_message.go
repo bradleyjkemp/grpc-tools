@@ -42,6 +42,12 @@ func (u *unknownFieldResolver) enrichDecodeDescriptor(resolved *desc.MessageDesc
 }
 
 func (u *unknownFieldResolver) enrichMessage(descriptor *builder.MessageBuilder, message *dynamic.Message) error {
+	if message == nil {
+		// TODO: I can't seem to reproduce this except in real usage.
+		// Putting a mutex in the dump interceptor also prevents this from occuring
+		// So it seems like a gnarly race condition
+		return errors.New("internal: got nil message")
+	}
 	for _, fieldNum := range message.GetUnknownFields() {
 		generatedFieldName := fmt.Sprintf("%s_%d", descriptor.GetName(), fieldNum)
 		unknownFieldContents := message.GetUnknownField(fieldNum)

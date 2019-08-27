@@ -5,7 +5,7 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/improbable-eng/grpc-web v0.11.0
-	github.com/jhump/protoreflect v1.4.4
+	github.com/jhump/protoreflect v1.5.0
 	github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/rivo/tview v0.0.0-20190602193159-384f577a620b

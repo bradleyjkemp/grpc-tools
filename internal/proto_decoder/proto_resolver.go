@@ -64,15 +64,10 @@ var messageName = strings.NewReplacer(
 type emptyResolver struct{}
 
 func (e emptyResolver) resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
-	d, err := desc.LoadMessageDescriptorForMessage(&empty.Empty{})
-	if err != nil {
-		return nil, err
-	}
-	mb, err := builder.FromMessage(d)
-	if err != nil {
-		return nil, err
-	}
-	mb.SetName(fmt.Sprintf("%s_%s", messageName.Replace(fullMethod), message.MessageOrigin))
+	// Create a new file so that all messages are associated with a file
+	fb := builder.NewFile("") // "" == generate unique filename
+	mb := builder.NewMessage(fmt.Sprintf("%s_%s", messageName.Replace(fullMethod), message.MessageOrigin))
+	fb.AddMessage(mb)
 	return mb.Build()
 }
 

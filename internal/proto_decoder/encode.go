@@ -3,7 +3,7 @@ package proto_decoder
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
@@ -15,7 +15,7 @@ type messageEncoder struct {
 }
 
 type MessageEncoder interface {
-	Encode(fullMethod string, message *internal.Message) ([]byte, error)
+	Encode(fullMethod string, message *dump_format.Message) ([]byte, error)
 }
 
 // Chain together a number of resolvers to decode incoming messages.
@@ -29,7 +29,7 @@ func NewEncoder(resolvers ...MessageResolver) *messageEncoder {
 	}
 }
 
-func (d *messageEncoder) Encode(fullMethod string, message *internal.Message) ([]byte, error) {
+func (d *messageEncoder) Encode(fullMethod string, message *dump_format.Message) ([]byte, error) {
 	switch {
 	case message.Message == nil && message.RawMessage != nil:
 		return message.RawMessage, nil
@@ -51,7 +51,7 @@ func (d *messageEncoder) Encode(fullMethod string, message *internal.Message) ([
 	}
 }
 
-func (d *messageEncoder) encodeFromHumanReadable(fullMethod string, message *internal.Message) ([]byte, error) {
+func (d *messageEncoder) encodeFromHumanReadable(fullMethod string, message *dump_format.Message) ([]byte, error) {
 	if len(d.resolvers) == 0 {
 		return nil, fmt.Errorf("no resolvers available")
 	}

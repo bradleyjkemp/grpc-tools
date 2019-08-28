@@ -2,7 +2,7 @@ package fixture
 
 import (
 	"encoding/json"
-	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"io"
 	"os"
@@ -12,7 +12,7 @@ import (
 type fixture map[string]*messageTree
 
 type messageTree struct {
-	origin       internal.MessageOrigin
+	origin       dump_format.MessageOrigin
 	raw          string
 	nextMessages []*messageTree
 }
@@ -28,7 +28,7 @@ func loadFixture(dumpPath string, encoder proto_decoder.MessageEncoder) (fixture
 	fixture := map[string]*messageTree{}
 
 	for {
-		rpc := internal.RPC{}
+		rpc := dump_format.RPC{}
 		err := dumpDecoder.Decode(&rpc)
 		if err == io.EOF {
 			break

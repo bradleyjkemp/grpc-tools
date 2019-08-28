@@ -3,7 +3,7 @@ package dump
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -18,10 +18,10 @@ func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		dss := &recordedServerStream{ServerStream: ss}
 		rpcErr := handler(srv, dss)
-		var rpcStatus *internal.Status
+		var rpcStatus *dump_format.Status
 		if rpcErr != nil {
 			grpcStatus, _ := status.FromError(rpcErr)
-			rpcStatus = &internal.Status{
+			rpcStatus = &dump_format.Status{
 				Code:    grpcStatus.Code().String(),
 				Message: grpcStatus.Message(),
 			}
@@ -29,7 +29,7 @@ func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_
 
 		fullMethod := strings.Split(info.FullMethod, "/")
 		md, _ := metadata.FromIncomingContext(ss.Context())
-		rpc := internal.RPC{
+		rpc := dump_format.RPC{
 			Service:  fullMethod[1],
 			Method:   fullMethod[2],
 			Messages: dss.events,

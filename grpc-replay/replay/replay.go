@@ -7,6 +7,7 @@ import (
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
+	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"github.com/sirupsen/logrus"
@@ -46,7 +47,7 @@ func Run(protoRoots, protoDescriptors, dumpPath, destinationOverride string, dia
 	dumpDecoder := json.NewDecoder(dumpFile)
 RPC:
 	for {
-		rpc := internal.RPC{}
+		rpc := dump_format.RPC{}
 		err := dumpDecoder.Decode(&rpc)
 		if err == io.EOF {
 			break
@@ -83,12 +84,12 @@ RPC:
 			}
 
 			switch message.MessageOrigin {
-			case internal.ClientMessage:
+			case dump_format.ClientMessage:
 				err := str.SendMsg(msgBytes)
 				if err != nil {
 					return fmt.Errorf("failed to send message: %v", err)
 				}
-			case internal.ServerMessage:
+			case dump_format.ServerMessage:
 				var resp []byte
 				err := str.RecvMsg(&resp)
 				if err != nil {

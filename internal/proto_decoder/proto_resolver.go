@@ -2,7 +2,7 @@ package proto_decoder
 
 import (
 	"fmt"
-	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_descriptor"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/jhump/protoreflect/desc"
@@ -14,20 +14,20 @@ type descriptorResolver struct {
 	methodDescriptors map[string]*desc.MethodDescriptor
 }
 
-func (d *descriptorResolver) resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (d *descriptorResolver) resolveEncoded(fullMethod string, message *dump_format.Message) (*desc.MessageDescriptor, error) {
 	return d.resolve(fullMethod, message.MessageOrigin)
 }
 
-func (d *descriptorResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (d *descriptorResolver) resolveDecoded(fullMethod string, message *dump_format.Message) (*desc.MessageDescriptor, error) {
 	return d.resolve(fullMethod, message.MessageOrigin)
 }
 
-func (d *descriptorResolver) resolve(fullMethod string, direction internal.MessageOrigin) (*desc.MessageDescriptor, error) {
+func (d *descriptorResolver) resolve(fullMethod string, direction dump_format.MessageOrigin) (*desc.MessageDescriptor, error) {
 	if descriptor, ok := d.methodDescriptors[fullMethod]; ok {
 		switch direction {
-		case internal.ClientMessage:
+		case dump_format.ClientMessage:
 			return descriptor.GetInputType(), nil
-		case internal.ServerMessage:
+		case dump_format.ServerMessage:
 			return descriptor.GetOutputType(), nil
 		}
 	}
@@ -63,7 +63,7 @@ var messageName = strings.NewReplacer(
 
 type emptyResolver struct{}
 
-func (e emptyResolver) resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (e emptyResolver) resolveEncoded(fullMethod string, message *dump_format.Message) (*desc.MessageDescriptor, error) {
 	// Create a new file so that all messages are associated with a file
 	fb := builder.NewFile("") // "" == generate unique filename
 	mb := builder.NewMessage(fmt.Sprintf("%s_%s", messageName.Replace(fullMethod), message.MessageOrigin))
@@ -71,6 +71,6 @@ func (e emptyResolver) resolveEncoded(fullMethod string, message *internal.Messa
 	return mb.Build()
 }
 
-func (e emptyResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (e emptyResolver) resolveDecoded(fullMethod string, message *dump_format.Message) (*desc.MessageDescriptor, error) {
 	return desc.LoadMessageDescriptorForMessage(&empty.Empty{})
 }

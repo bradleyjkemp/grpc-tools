@@ -2,7 +2,7 @@ package proto_decoder
 
 import (
 	"fmt"
-	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/jhump/protoreflect/desc"
@@ -19,7 +19,7 @@ type unknownFieldResolver struct{}
 
 // This takes a message descriptor and enriches it to add any unknown fields present.
 // This means that all unknown fields will show up in the dump.
-func (u *unknownFieldResolver) enrichDecodeDescriptor(resolved *desc.MessageDescriptor, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (u *unknownFieldResolver) enrichDecodeDescriptor(resolved *desc.MessageDescriptor, message *dump_format.Message) (*desc.MessageDescriptor, error) {
 	decoded := dynamic.NewMessage(resolved)
 	err := proto.Unmarshal(message.RawMessage, decoded)
 	if err != nil {

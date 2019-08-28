@@ -1,4 +1,4 @@
-package internal
+package dump_format
 
 import (
 	"fmt"

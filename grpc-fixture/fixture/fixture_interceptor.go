@@ -1,7 +1,7 @@
 package fixture
 
 import (
-	"github.com/bradleyjkemp/grpc-tools/internal"
+	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,12 +19,12 @@ func (f fixture) intercept(srv interface{}, ss grpc.ServerStream, info *grpc.Str
 		// possibility that server sends the first method
 		serverFirst := len(messageTreeNode.nextMessages) > 0
 		for _, message := range messageTreeNode.nextMessages {
-			serverFirst = serverFirst && message.origin == internal.ServerMessage
+			serverFirst = serverFirst && message.origin == dump_format.ServerMessage
 		}
 
 		if serverFirst {
 			for _, message := range messageTreeNode.nextMessages {
-				if message.origin == internal.ServerMessage {
+				if message.origin == dump_format.ServerMessage {
 					err := ss.SendMsg([]byte(message.raw))
 					if err != nil {
 						return err
@@ -46,7 +46,7 @@ func (f fixture) intercept(srv interface{}, ss grpc.ServerStream, info *grpc.Str
 			}
 			var found bool
 			for _, message := range messageTreeNode.nextMessages {
-				if message.origin == internal.ClientMessage && message.raw == string(receivedMessage) {
+				if message.origin == dump_format.ClientMessage && message.raw == string(receivedMessage) {
 					// found the matching message so recurse deeper into the tree
 					messageTreeNode = message
 					found = true

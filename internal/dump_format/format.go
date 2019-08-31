@@ -17,7 +17,7 @@ const (
 type RPC struct {
 	Timestamp time.Time   `json:"timestamp"`
 	Type      LineType    `json:"type"`
-	ID        int         `json:"id"`
+	ID        int64       `json:"id"`
 	Service   string      `json:"service"`
 	Method    string      `json:"method"`
 	Metadata  metadata.MD `json:"metadata"`
@@ -40,7 +40,7 @@ type Message struct {
 type Status struct {
 	Timestamp time.Time `json:"timestamp"`
 	Type      LineType  `json:"type"`
-	ID        int       `json:"id"`
+	ID        int64     `json:"id"`
 	Code      string    `json:"code"`
 	Message   string    `json:"message,omitempty"`
 }

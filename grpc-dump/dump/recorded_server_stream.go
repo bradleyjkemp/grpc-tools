@@ -18,7 +18,7 @@ type dumpServerStream struct {
 	grpc.ServerStream
 	messageCounter int
 
-	rpcID      int
+	rpcID      int64
 	fullMethod string
 	output     io.Writer
 	logger     logrus.FieldLogger

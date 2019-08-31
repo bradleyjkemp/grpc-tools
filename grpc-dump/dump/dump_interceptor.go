@@ -6,6 +6,7 @@ import (
 	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/atomic"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -15,7 +16,7 @@ import (
 	"time"
 )
 
-var rpcID int
+var rpcID = atomic.NewInt64(-1)
 
 // dump interceptor implements a gRPC.StreamingServerInterceptor that dumps all RPC details
 func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_decoder.MessageDecoder) grpc.StreamServerInterceptor {
@@ -25,12 +26,11 @@ func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_
 		rpc := dump_format.RPC{
 			Timestamp: time.Now(),
 			Type:      dump_format.RPCLine,
-			ID:        rpcID,
+			ID:        rpcID.Inc(),
 			Service:   fullMethod[1],
 			Method:    fullMethod[2],
 			Metadata:  md,
 		}
-		rpcID++
 		dump, _ := json.Marshal(rpc)
 		fmt.Fprintln(output, string(dump))
 

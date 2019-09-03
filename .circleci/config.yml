@@ -11,6 +11,7 @@ jobs:
       - codecov/upload:
           file: unit-coverage.out
           flags: "unit"
+      - run: git diff --quiet && echo "Working directory clean" || (echo "Working directory not clean"; exit 1)
 
   integration-tests:
     docker:

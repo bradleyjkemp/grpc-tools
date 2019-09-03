@@ -24,6 +24,7 @@ jobs:
       - codecov/upload:
           file: integration-coverage.out
           flags: "integration"
+      - run: git diff --quiet && echo "Working directory clean" || (echo "Working directory not clean"; exit 1)
 
   release:
     docker:

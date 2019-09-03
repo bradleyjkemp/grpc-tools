@@ -1,7 +1,8 @@
 # Changelog
 
-## v0.2.3 (Unreleased)
+## [v0.2.3](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.3)
 * Added a defer-recover handler so that any panics in the `grpc-proxy` interceptor do not kill the proxy [#53](https://github.com/bradleyjkemp/grpc-tools/pull/53).
+* Added a new command-line option, `--system_proxy`, to automatically enable grpc-dump/grpc-fixture as the system proxy on MacOS [#55](https://github.com/bradleyjkemp/grpc-tools/pull/55).
 
 ## [v0.2.2](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.2)
 * Improved behaviour and logging when a message fails to be decoded [#51](https://github.com/bradleyjkemp/grpc-tools/pull/51).

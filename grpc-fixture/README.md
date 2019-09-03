@@ -19,6 +19,8 @@ Usage of grpc-fixture:
     	Key file to use for serving using TLS.
   -port int
     	Port to listen on.
+  -system_proxy
+    	Automatically configure system to use this as the proxy for all connections.
 ```
 
 ## Troubleshooting

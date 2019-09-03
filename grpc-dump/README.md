@@ -23,6 +23,8 @@ Usage of grpc-dump:
     	A comma separated list of proto descriptors to load gRPC service definitions from.
   -proto_roots string
     	A comma separated list of directories to search for gRPC service definitions.
+  -system_proxy
+    	Automatically configure system to use this as the proxy for all connections.
 ```
 
 ## JSON stream output

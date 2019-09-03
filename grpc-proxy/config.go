@@ -55,11 +55,12 @@ func WithDialer(dialer ContextDialer) Configurator {
 }
 
 var (
-	fPort        int
-	fCertFile    string
-	fKeyFile     string
-	fDestination string
-	fLogLevel    string
+	fPort              int
+	fCertFile          string
+	fKeyFile           string
+	fDestination       string
+	fLogLevel          string
+	fEnableSystemProxy bool
 )
 
 // Must be called before flag.Parse() if using the DefaultFlags option
@@ -69,6 +70,7 @@ func RegisterDefaultFlags() {
 	flag.StringVar(&fKeyFile, "key", "", "Key file to use for serving using TLS. By default the current directory will be scanned for mkcert keys to use.")
 	flag.StringVar(&fDestination, "destination", "", "Destination server to forward requests to if no destination can be inferred from the request itself. This is generally only used for clients not supporting HTTP proxies.")
 	flag.StringVar(&fLogLevel, "log_level", logrus.InfoLevel.String(), "Set the log level that grpc-proxy will log at. Values are {error, warning, info, debug}")
+	flag.BoolVar(&fEnableSystemProxy, "system_proxy", false, "Whether to automatically enable using the proxy at the system level.")
 }
 
 // This must be used after a call to flag.Parse()
@@ -78,5 +80,6 @@ func DefaultFlags() Configurator {
 		s.certFile = fCertFile
 		s.keyFile = fKeyFile
 		s.destination = fDestination
+		s.enableSystemProxy = fEnableSystemProxy
 	}
 }

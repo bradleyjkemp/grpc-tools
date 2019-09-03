@@ -8,14 +8,19 @@ import (
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/detectcert"
+	"github.com/bradleyjkemp/grpc-tools/internal/proxy_settings"
 	"github.com/bradleyjkemp/grpc-tools/internal/proxydialer"
 	"github.com/bradleyjkemp/grpc-tools/internal/tlsmux"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type ContextDialer = func(context.Context, string) (net.Conn, error)
@@ -34,6 +39,8 @@ type server struct {
 	destination string
 	connPool    *internal.ConnPool
 	dialer      ContextDialer
+
+	enableSystemProxy bool
 
 	listener net.Listener
 }
@@ -116,6 +123,20 @@ func (s *server) Start() error {
 	httpLis, httpsLis := tlsmux.New(s.logger, proxyLis, s.x509Cert, s.tlsCert)
 
 	errChan := make(chan error)
+	if s.enableSystemProxy {
+		disableProxy, err := proxy_settings.EnableProxy(s.listener.Addr().String())
+		if err != nil {
+			return errors.Wrap(err, "failed to enable system proxy")
+		}
+		s.logger.Info("Enabled system proxy.")
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			<-sigs
+			errChan <- disableProxy()
+		}()
+	}
+
 	go func() {
 		errChan <- httpServer.Serve(httpLis)
 	}()

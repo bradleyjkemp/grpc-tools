@@ -43,6 +43,7 @@ workflows:
   version: 2
   build_and_test:
     jobs:
+      - check-dependencies
       - unit-tests
       - integration-tests
   release:

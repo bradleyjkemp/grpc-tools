@@ -1,6 +1,7 @@
 package fixture
 
 import (
+	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/grpc-proxy"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"strings"
@@ -26,6 +27,7 @@ func Run(protoRoots, protoDescriptors, dumpPath string, proxyConfig ...grpc_prox
 	encoder := proto_decoder.NewEncoder(resolvers...)
 
 	interceptor, err := loadFixture(dumpPath, encoder)
+	fmt.Println("loaded fixture", err)
 	if err != nil {
 		return err
 	}

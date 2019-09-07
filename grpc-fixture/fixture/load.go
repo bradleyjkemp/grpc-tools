@@ -1,6 +1,8 @@
 package fixture
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"github.com/pkg/errors"
@@ -29,12 +31,14 @@ func loadFixture(dumpPath string, encoder proto_decoder.MessageEncoder) (fixture
 		return nil, err
 	}
 
-	dumpDecoder := dump_format.NewDecoder(dumpFile)
+	dumpDecoder := json.NewDecoder(dumpFile)
 	fixture := map[string]*messageTree{}
 	rpcs := map[int64]rpcInfo{}
 
 	for {
-		line, err := dumpDecoder.Decode()
+		line := &dump_format.DecodedLine{}
+		err := dumpDecoder.Decode(line)
+		fmt.Println("read line", line.Get(), err)
 		if err == io.EOF {
 			break
 		}
@@ -42,7 +46,7 @@ func loadFixture(dumpPath string, encoder proto_decoder.MessageEncoder) (fixture
 			return nil, err
 		}
 
-		switch l := line.(type) {
+		switch l := line.Get().(type) {
 		case *dump_format.RPC:
 			// First time we've seen an RPC so initialise to point at the top of the message tree
 			if fixture[l.StreamName()] == nil {
@@ -55,7 +59,7 @@ func loadFixture(dumpPath string, encoder proto_decoder.MessageEncoder) (fixture
 			messageTreeNode := rpc.messageTree
 			msgBytes, err := encoder.Encode(rpc.StreamName(), l)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to get message bytes")
 			}
 			var foundExisting *messageTree
 			for _, nextMessage := range messageTreeNode.nextMessages {

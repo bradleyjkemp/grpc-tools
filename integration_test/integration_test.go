@@ -45,6 +45,7 @@ func TestIntegration(t *testing.T) {
 	}()
 
 	go func() {
+		fmt.Println("running fixture")
 		fixtureErr := fixture.Run(
 			protoRoots,
 			protoDescriptors,
@@ -53,6 +54,7 @@ func TestIntegration(t *testing.T) {
 			grpc_proxy.UsingTLS(certFile, keyFile),
 		)
 		if fixtureErr != nil {
+			t.Log("Got fixture error", fixtureErr)
 			errors <- fixtureErr
 		}
 	}()
@@ -76,6 +78,8 @@ func TestIntegration(t *testing.T) {
 		}
 	}()
 
+	t.Log("running replay")
+	fmt.Println("running replay")
 	replayErr := replay.Run(
 		protoRoots,
 		protoDescriptors,
@@ -87,16 +91,19 @@ func TestIntegration(t *testing.T) {
 			}, nil
 		}),
 	)
+	fmt.Println("replay finished")
 	if replayErr != nil {
 		t.Log("Unexpected error:", replayErr)
 		t.Fail()
 	}
 
+	fmt.Println("running curl")
 	cmd := curlCommand("http://grpc-web.github.io/grpc.gateway.testing.EchoService/Echo")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Log("Unexpected error:", err, string(out))
 		t.Fail()
 	}
+	fmt.Println("ran curl")
 
 	cmd = curlCommand("https://grpc-web.github.io:1234/grpc.gateway.testing.EchoService/Echo")
 	if out, err := cmd.CombinedOutput(); err != nil {

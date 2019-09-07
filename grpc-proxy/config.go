@@ -69,7 +69,7 @@ func RegisterDefaultFlags() {
 	flag.StringVar(&fCertFile, "cert", "", "Certificate file to use for serving using TLS. By default the current directory will be scanned for mkcert certificates to use.")
 	flag.StringVar(&fKeyFile, "key", "", "Key file to use for serving using TLS. By default the current directory will be scanned for mkcert keys to use.")
 	flag.StringVar(&fDestination, "destination", "", "Destination server to forward requests to if no destination can be inferred from the request itself. This is generally only used for clients not supporting HTTP proxies.")
-	flag.StringVar(&fLogLevel, "log_level", logrus.InfoLevel.String(), "Set the log level that grpc-proxy will log at. Values are {error, warning, info, debug}")
+	flag.StringVar(&fLogLevel, "log_level", logrus.DebugLevel.String(), "Set the log level that grpc-proxy will log at. Values are {error, warning, info, debug}")
 	flag.BoolVar(&fEnableSystemProxy, "system_proxy", false, "Automatically configure system to use this as the proxy for all connections.")
 }
 

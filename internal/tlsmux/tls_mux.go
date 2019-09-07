@@ -126,7 +126,8 @@ func handleTlsConn(logger logrus.FieldLogger, conn net.Conn, cert *x509.Certific
 	logger.Debugf("No certificate able to intercept connections to %s, proxying instead.", originalHostname)
 	destConn, err := net.Dial(conn.LocalAddr().Network(), proxConn.OriginalDestination())
 	if err != nil {
-		logger.WithError(err).Warnf("Failed proxying connection to %s, Error while dialing.", originalHostname)
+		logger.WithError(err).Debugf("Failed proxying connection to %s, Error while dialing.", originalHostname)
+		_ = conn.Close()
 		return
 	}
 	err = forwardConnection(

@@ -116,7 +116,7 @@ func (s *server) Start() error {
 	)
 
 	proxyLis := newProxyListener(s.logger, s.listener)
-
+	httpReverseProxy := newReverseProxy(s.logger)
 	httpServer := newHttpServer(s.logger, grpcWebHandler, proxyLis.internalRedirect, httpReverseProxy)
 	httpsServer := withHttpsMiddleware(newHttpServer(s.logger, grpcWebHandler, proxyLis.internalRedirect, httpReverseProxy))
 

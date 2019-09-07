@@ -64,20 +64,27 @@ func handleConnect(w http.ResponseWriter, r *http.Request, internalRedirect func
 	}
 }
 
-var httpReverseProxy = &httputil.ReverseProxy{
-	Director: func(request *http.Request) {
-		// Because of the TLSmux used to server HTTP and HTTPS on the same port
-		// we have to rely on the Forwarded header (added by middleware) to
-		// tell which protocol to use for proxying.
-		// (we could always set HTTP but would mean relying on the upstream
-		// properly redirecting HTTP->HTTPS)
-		if marker.IsTLSRequest(request.Header) {
-			request.URL.Scheme = "https"
-		} else {
-			request.URL.Scheme = "http"
-		}
-		request.URL.Host = request.Host
-	},
+func newReverseProxy(logger logrus.FieldLogger) *httputil.ReverseProxy {
+	logger = logger.WithField("", "http_reverse_proxy")
+	return &httputil.ReverseProxy{
+		Director: func(request *http.Request) {
+			// Because of the TLSmux used to server HTTP and HTTPS on the same port
+			// we have to rely on the Forwarded header (added by middleware) to
+			// tell which protocol to use for proxying.
+			// (we could always set HTTP but would mean relying on the upstream
+			// properly redirecting HTTP->HTTPS)
+			if marker.IsTLSRequest(request.Header) {
+				request.URL.Scheme = "https"
+			} else {
+				request.URL.Scheme = "http"
+			}
+			request.URL.Host = request.Host
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			logger.WithError(err).Debug("http proxy error")
+			w.WriteHeader(http.StatusBadGateway)
+		},
+	}
 }
 
 func isGrpcRequest(server grpcWebServer, r *http.Request) bool {

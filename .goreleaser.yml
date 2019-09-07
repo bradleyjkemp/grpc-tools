@@ -26,10 +26,6 @@ builds:
   id: grpc-replay
   binary: grpc-replay
   main: ./grpc-replay
-- <<: *common
-  id: grpc-view
-  binary: grpc-view
-  main: ./grpc-view
 
 brews:
 -

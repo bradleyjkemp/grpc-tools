@@ -24,12 +24,14 @@ func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_
 		fullMethod := strings.Split(info.FullMethod, "/")
 		md, _ := metadata.FromIncomingContext(ss.Context())
 		rpc := dump_format.RPC{
-			Timestamp: time.Now(),
-			Type:      dump_format.RPCLine,
-			ID:        rpcID.Inc(),
-			Service:   fullMethod[1],
-			Method:    fullMethod[2],
-			Metadata:  md,
+			Common: dump_format.Common{
+				Timestamp: time.Now(),
+				Type:      dump_format.RPCLine,
+			},
+			ID:       rpcID.Inc(),
+			Service:  fullMethod[1],
+			Method:   fullMethod[2],
+			Metadata: md,
 		}
 		dump, _ := json.Marshal(rpc)
 		fmt.Fprintln(output, string(dump))
@@ -45,9 +47,11 @@ func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_
 		rpcErr := handler(srv, dss)
 
 		rpcStatus := &dump_format.Status{
-			Timestamp: time.Now(),
-			Type:      dump_format.StatusLine,
-			ID:        rpc.ID,
+			Common: dump_format.Common{
+				Timestamp: time.Now(),
+				Type:      dump_format.StatusLine,
+			},
+			ID: rpc.ID,
 		}
 		if rpcErr != nil {
 			grpcStatus, _ := status.FromError(rpcErr)

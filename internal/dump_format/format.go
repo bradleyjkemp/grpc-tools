@@ -14,13 +14,17 @@ const (
 	StatusLine  LineType = "status"
 )
 
+type Common struct {
+	Timestamp time.Time `json:"timestamp"`
+	Type      LineType  `json:"type"`
+}
+
 type RPC struct {
-	Timestamp time.Time   `json:"timestamp"`
-	Type      LineType    `json:"type"`
-	ID        int64       `json:"id"`
-	Service   string      `json:"service"`
-	Method    string      `json:"method"`
-	Metadata  metadata.MD `json:"metadata"`
+	Common
+	ID       int64       `json:"id"`
+	Service  string      `json:"service"`
+	Method   string      `json:"method"`
+	Metadata metadata.MD `json:"metadata"`
 }
 
 func (r RPC) StreamName() string {
@@ -28,21 +32,19 @@ func (r RPC) StreamName() string {
 }
 
 type Message struct {
-	Timestamp     time.Time     `json:"timestamp"`
-	Type          LineType      `json:"type"`
-	ID            int           `json:"id"`
-	MessageID     int           `json:"message_id"`
+	Common
+	ID            int64         `json:"id"`
+	MessageID     int64         `json:"message_id"`
 	MessageOrigin MessageOrigin `json:"origin,omitempty"`
 	RawMessage    []byte        `json:"raw,omitempty"`
 	Message       interface{}   `json:"message,omitempty"`
 }
 
 type Status struct {
-	Timestamp time.Time `json:"timestamp"`
-	Type      LineType  `json:"type"`
-	ID        int64     `json:"id"`
-	Code      string    `json:"code"`
-	Message   string    `json:"message,omitempty"`
+	Common
+	ID      int64  `json:"id"`
+	Code    string `json:"code"`
+	Message string `json:"message,omitempty"`
 }
 
 type MessageOrigin string

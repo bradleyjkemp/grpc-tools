@@ -16,7 +16,7 @@ import (
 type dumpServerStream struct {
 	sync.Mutex
 	grpc.ServerStream
-	messageCounter int
+	messageCounter int64
 
 	rpcID      int64
 	fullMethod string
@@ -48,8 +48,10 @@ func (ss *dumpServerStream) RecvMsg(m interface{}) error {
 
 func (ss *dumpServerStream) dumpMessage(message []byte, origin dump_format.MessageOrigin) {
 	msgLine := &dump_format.Message{
-		Timestamp:     time.Now(),
-		Type:          dump_format.MessageLine,
+		Common: dump_format.Common{
+			Timestamp: time.Now(),
+			Type:      dump_format.MessageLine,
+		},
 		ID:            ss.rpcID,
 		MessageID:     ss.messageCounter,
 		MessageOrigin: origin,

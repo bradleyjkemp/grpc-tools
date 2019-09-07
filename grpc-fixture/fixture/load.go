@@ -1,12 +1,10 @@
 package fixture
 
 import (
-	"encoding/json"
 	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"github.com/pkg/errors"
 	"io"
-	"net/rpc"
 	"os"
 )
 
@@ -54,60 +52,33 @@ func loadFixture(dumpPath string, encoder proto_decoder.MessageEncoder) (fixture
 
 		case *dump_format.Message:
 			rpc := rpcs[l.ID]
-			msgBytes, err := encoder.Encode(rpc.StreamName(), msg)
+			messageTreeNode := rpc.messageTree
+			msgBytes, err := encoder.Encode(rpc.StreamName(), l)
 			if err != nil {
 				return nil, err
 			}
 			var foundExisting *messageTree
 			for _, nextMessage := range messageTreeNode.nextMessages {
-				if nextMessage.origin == msg.MessageOrigin && nextMessage.raw == string(msgBytes) {
+				if nextMessage.origin == l.MessageOrigin && nextMessage.raw == string(msgBytes) {
 					foundExisting = nextMessage
 					break
 				}
 			}
 			if foundExisting == nil {
 				foundExisting = &messageTree{
-					origin:       msg.MessageOrigin,
+					origin:       l.MessageOrigin,
 					raw:          string(msgBytes),
 					nextMessages: nil,
 				}
 				messageTreeNode.nextMessages = append(messageTreeNode.nextMessages, foundExisting)
 			}
-
-			messageTreeNode = foundExisting
+			rpc.messageTree = foundExisting
 
 		case *dump_format.Status:
+			// TODO: handle RPC statuses (issue #24)
 
 		default:
 			return nil, errors.Errorf("unknown line type %T", line)
-		}
-
-		if fixture[rpc.StreamName()] == nil {
-			fixture[rpc.StreamName()] = &messageTree{}
-		}
-		messageTreeNode := fixture[rpc.StreamName()]
-		for _, msg := range rpc.Messages {
-			msgBytes, err := encoder.Encode(rpc.StreamName(), msg)
-			if err != nil {
-				return nil, err
-			}
-			var foundExisting *messageTree
-			for _, nextMessage := range messageTreeNode.nextMessages {
-				if nextMessage.origin == msg.MessageOrigin && nextMessage.raw == string(msgBytes) {
-					foundExisting = nextMessage
-					break
-				}
-			}
-			if foundExisting == nil {
-				foundExisting = &messageTree{
-					origin:       msg.MessageOrigin,
-					raw:          string(msgBytes),
-					nextMessages: nil,
-				}
-				messageTreeNode.nextMessages = append(messageTreeNode.nextMessages, foundExisting)
-			}
-
-			messageTreeNode = foundExisting
 		}
 	}
 

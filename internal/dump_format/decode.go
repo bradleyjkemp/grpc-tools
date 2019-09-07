@@ -30,6 +30,7 @@ func (dec *Decoder) Decode() (interface{}, error) {
 		return nil, err
 	}
 
+	// This double decode is bad but I think can be fixed in future with a custom unmarshaller
 	raw, err := json.Marshal(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to re-marshal line")

@@ -8,7 +8,7 @@
   "type": "message",
   "id": 0,
   "message_id": 0,
-  "message_origin": "client",
+  "origin": "client",
   "raw": "ChEaDUNsaWVudFJlcXVlc3QgARAB",
   "message": {
     "outerValue": {
@@ -22,7 +22,7 @@
   "type": "message",
   "id": 0,
   "message_id": 1,
-  "message_origin": "server",
+  "origin": "server",
   "raw": "ChIaDlNlcnZlclJlc3BvbnNlIAIQAg==",
   "message": {
     "outerValue": {
@@ -48,7 +48,7 @@
   "type": "message",
   "id": 1,
   "message_id": 0,
-  "message_origin": "server",
+  "origin": "server",
   "raw": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw==",
   "message": {
     "1": {
@@ -62,7 +62,7 @@
   "type": "message",
   "id": 1,
   "message_id": 1,
-  "message_origin": "server",
+  "origin": "server",
   "raw": "ChIaDlNlcnZlck1lc3NhZ2UyIAUQBRoORGV0ZWN0ZWQgdmFsdWU="
 }
 {
@@ -81,7 +81,7 @@
   "type": "message",
   "id": 2,
   "message_id": 0,
-  "message_origin": "server",
+  "origin": "server",
   "raw": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw==",
   "message": {
     "1": {
@@ -95,7 +95,7 @@
   "type": "message",
   "id": 2,
   "message_id": 1,
-  "message_origin": "server",
+  "origin": "server",
   "raw": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw==",
   "message": {
     "1": {

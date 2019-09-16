@@ -2,7 +2,6 @@ package fixture
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal/dump_format"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
 	"github.com/pkg/errors"
@@ -33,12 +32,11 @@ func loadFixture(dumpPath string, encoder proto_decoder.MessageEncoder) (fixture
 
 	dumpDecoder := json.NewDecoder(dumpFile)
 	fixture := map[string]*messageTree{}
-	rpcs := map[int64]rpcInfo{}
+	rpcs := map[int64]*rpcInfo{}
 
 	for {
 		line := &dump_format.DecodedLine{}
 		err := dumpDecoder.Decode(line)
-		fmt.Println("read line", line.Get(), err)
 		if err == io.EOF {
 			break
 		}
@@ -52,7 +50,7 @@ func loadFixture(dumpPath string, encoder proto_decoder.MessageEncoder) (fixture
 			if fixture[l.StreamName()] == nil {
 				fixture[l.StreamName()] = &messageTree{}
 			}
-			rpcs[l.ID] = rpcInfo{l, fixture[l.StreamName()]}
+			rpcs[l.ID] = &rpcInfo{l, fixture[l.StreamName()]}
 
 		case *dump_format.Message:
 			rpc := rpcs[l.ID]

@@ -1,16 +1,8 @@
 {
+  "type": "rpc",
+  "id": 0,
   "service": "bradleyjkemp.github.io.TestService",
   "method": "TestUnaryClientRequest",
-  "messages": [
-    {
-      "message_origin": "client",
-      "raw_message": "ChEaDUNsaWVudFJlcXVlc3QgARAB"
-    },
-    {
-      "message_origin": "server",
-      "raw_message": "ChIaDlNlcnZlclJlc3BvbnNlIAIQAg=="
-    }
-  ],
   "metadata": {
     ":authority": [
       "bradleyjkemp.github.io:444"
@@ -27,19 +19,30 @@
   }
 }
 {
+  "type": "message",
+  "id": 0,
+  "message_id": 0,
+  "origin": "client",
+  "raw": "ChEaDUNsaWVudFJlcXVlc3QgARAB"
+}
+{
+  "type": "message",
+  "id": 0,
+  "message_id": 1,
+  "origin": "server",
+  "raw": "ChIaDlNlcnZlclJlc3BvbnNlIAIQAg=="
+}
+{
+  "type": "status",
+  "id":0,
+  "code":"OK"
+}
+
+{
+  "type": "rpc",
+  "id": 1,
   "service": "bradleyjkemp.github.io.TestService",
   "method": "TestUnaryClientRequest",
-  "messages": [
-    {
-      "message_origin": "client",
-      "comment": "This is the same request as above, just marshalled from human readable form",
-      "message": {"outerValue":{"innerValue":"ClientRequest","innerNum":1},"outerNum":1}
-    },
-    {
-      "message_origin": "server",
-      "raw_message": "ChIaDlNlcnZlclJlc3BvbnNlIAIQAg=="
-    }
-  ],
   "metadata": {
     ":authority": [
       "bradleyjkemp.github.io:444"
@@ -56,18 +59,31 @@
   }
 }
 {
+  "type": "message",
+  "id": 1,
+  "message_id": 0,
+  "origin": "client",
+  "comment": "This is the same request as above, just marshalled from human readable form",
+  "message": {"outerValue":{"innerValue":"ClientRequest","innerNum":1},"outerNum":1}
+}
+{
+  "type": "message",
+  "id": 1,
+  "message_id": 1,
+  "origin": "server",
+  "raw": "ChIaDlNlcnZlclJlc3BvbnNlIAIQAg=="
+}
+{
+  "type": "status",
+  "id": 1,
+  "code":"OK"
+}
+
+{
+  "type": "rpc",
+  "id": 2,
   "service": "bradleyjkemp.github.io.TestService",
   "method": "TestStreamingServerMessages",
-  "messages": [
-    {
-      "message_origin": "server",
-      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw=="
-    },
-    {
-      "message_origin": "server",
-      "raw_message": "ChIaDlNlcnZlck1lc3NhZ2UyIAUQBRoORGV0ZWN0ZWQgdmFsdWU="
-    }
-  ],
   "metadata": {
     ":authority": [
       "a-different-domain.github.io:444"
@@ -82,4 +98,23 @@
       "grpc-go/1.8.2"
     ]
   }
+}
+{
+  "type": "message",
+  "id": 2,
+  "message_id": 0,
+  "origin": "server",
+  "raw": "ChIaDlNlcnZlck1lc3NhZ2UxIAMQAw=="
+}
+{
+  "type": "message",
+  "id": 2,
+  "message_id": 1,
+  "origin": "server",
+  "raw": "ChIaDlNlcnZlck1lc3NhZ2UyIAUQBRoORGV0ZWN0ZWQgdmFsdWU="
+}
+{
+  "type": "status",
+  "id":2,
+  "code":"OK"
 }

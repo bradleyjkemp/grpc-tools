@@ -1,6 +1,7 @@
 package proto_decoder
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
@@ -59,7 +60,7 @@ func (d *messageEncoder) encodeFromHumanReadable(fullMethod string, message *int
 	var err error
 	for _, resolver := range d.resolvers {
 		var descriptor *desc.MessageDescriptor
-		descriptor, err = resolver.resolveDecoded(fullMethod, message)
+		descriptor, err = resolver.resolveDecoded(context.Background(), fullMethod, message, nil)
 		if err != nil {
 			continue
 		}

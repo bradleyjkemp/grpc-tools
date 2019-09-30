@@ -1,0 +1,53 @@
+(fixture.fixture) (len=3) {
+  (string) (len=63) "/bradleyjkemp.github.io.TestService/TestStreamingServerMessages": (*fixture.messageTree)({
+    origin: (dump_format.MessageOrigin) "",
+    raw: (string) "",
+    nextMessages: ([]*fixture.messageTree) (len=1) {
+      (*fixture.messageTree)({
+        origin: (dump_format.MessageOrigin) (len=6) "server",
+        raw: (string) (len=22) "\n\x12\x1a\x0eServerMessage1 \x03\x10\x03",
+        nextMessages: ([]*fixture.messageTree) (len=1) {
+          (*fixture.messageTree)({
+            origin: (dump_format.MessageOrigin) (len=6) "server",
+            raw: (string) (len=38) "\n\x12\x1a\x0eServerMessage2 \x05\x10\x05\x1a\x0eDetected value",
+            nextMessages: ([]*fixture.messageTree) <nil>
+          })
+        }
+      })
+    }
+  }),
+  (string) (len=58) "/bradleyjkemp.github.io.TestService/TestUnaryClientRequest": (*fixture.messageTree)({
+    origin: (dump_format.MessageOrigin) "",
+    raw: (string) "",
+    nextMessages: ([]*fixture.messageTree) (len=1) {
+      (*fixture.messageTree)({
+        origin: (dump_format.MessageOrigin) (len=6) "client",
+        raw: (string) (len=21) "\n\x11\x1a\rClientRequest \x01\x10\x01",
+        nextMessages: ([]*fixture.messageTree) (len=1) {
+          (*fixture.messageTree)({
+            origin: (dump_format.MessageOrigin) (len=6) "server",
+            raw: (string) (len=22) "\n\x12\x1a\x0eServerResponse \x02\x10\x02",
+            nextMessages: ([]*fixture.messageTree) <nil>
+          })
+        }
+      })
+    }
+  }),
+  (string) (len=38) "/grpc.gateway.testing.EchoService/Echo": (*fixture.messageTree)({
+    origin: (dump_format.MessageOrigin) "",
+    raw: (string) "",
+    nextMessages: ([]*fixture.messageTree) (len=1) {
+      (*fixture.messageTree)({
+        origin: (dump_format.MessageOrigin) (len=6) "server",
+        raw: (string) (len=22) "\n\x12\x1a\x0eServerMessage1 \x03\x10\x03",
+        nextMessages: ([]*fixture.messageTree) (len=1) {
+          (*fixture.messageTree)({
+            origin: (dump_format.MessageOrigin) (len=6) "server",
+            raw: (string) (len=22) "\n\x12\x1a\x0eServerMessage1 \x03\x10\x03",
+            nextMessages: ([]*fixture.messageTree) <nil>
+          })
+        }
+      })
+    }
+  })
+}

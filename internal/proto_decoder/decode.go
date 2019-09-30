@@ -1,25 +1,27 @@
 package proto_decoder
 
 import (
+	"context"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/metadata"
 )
 
 type MessageResolver interface {
 	// takes an encoded message and finds a message descriptor for it
 	// so it can be unmarshalled into an object
-	resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error)
+	resolveEncoded(ctx context.Context, fullMethod string, message *internal.Message, metadata metadata.MD) (*desc.MessageDescriptor, error)
 
 	// takes a message object and finds a message descriptor for it
 	// so it can be marshalled back into bytes
-	resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error)
+	resolveDecoded(ctx context.Context, fullMethod string, message *internal.Message, metadata metadata.MD) (*desc.MessageDescriptor, error)
 }
 
 type MessageDecoder interface {
-	Decode(fullMethod string, message *internal.Message) (*dynamic.Message, error)
+	Decode(fullMethod string, message *internal.Message, metadata metadata.MD) (*dynamic.Message, error)
 }
 
 type messageDecoder struct {
@@ -39,11 +41,11 @@ func NewDecoder(logger logrus.FieldLogger, resolvers ...MessageResolver) *messag
 	}
 }
 
-func (d *messageDecoder) Decode(fullMethod string, message *internal.Message) (*dynamic.Message, error) {
+func (d *messageDecoder) Decode(fullMethod string, message *internal.Message, md metadata.MD) (*dynamic.Message, error) {
 	var err error
 	var descriptor *desc.MessageDescriptor
 	for _, resolver := range d.resolvers {
-		descriptor, err = resolver.resolveEncoded(fullMethod, message)
+		descriptor, err = resolver.resolveEncoded(context.Background(), fullMethod, message, md)
 		if err == nil {
 			break
 		}

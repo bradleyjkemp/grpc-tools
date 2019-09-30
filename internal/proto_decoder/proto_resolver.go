@@ -1,12 +1,14 @@
 package proto_decoder
 
 import (
+	"context"
 	"fmt"
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_descriptor"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/builder"
+	"google.golang.org/grpc/metadata"
 	"strings"
 )
 
@@ -63,7 +65,7 @@ var messageName = strings.NewReplacer(
 
 type emptyResolver struct{}
 
-func (e emptyResolver) resolveEncoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (e emptyResolver) resolveEncoded(_ context.Context, fullMethod string, message *internal.Message, _ metadata.MD) (*desc.MessageDescriptor, error) {
 	// Create a new file so that all messages are associated with a file
 	fb := builder.NewFile("") // "" == generate unique filename
 	mb := builder.NewMessage(fmt.Sprintf("%s_%s", messageName.Replace(fullMethod), message.MessageOrigin))
@@ -71,6 +73,6 @@ func (e emptyResolver) resolveEncoded(fullMethod string, message *internal.Messa
 	return mb.Build()
 }
 
-func (e emptyResolver) resolveDecoded(fullMethod string, message *internal.Message) (*desc.MessageDescriptor, error) {
+func (e emptyResolver) resolveDecoded(_ context.Context, fullMethod string, message *internal.Message, _ metadata.MD) (*desc.MessageDescriptor, error) {
 	return desc.LoadMessageDescriptorForMessage(&empty.Empty{})
 }

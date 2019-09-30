@@ -10,7 +10,7 @@ func Fuzz(data []byte) int {
 
 	_, err := dec.Decode("", &internal.Message{
 		RawMessage: data,
-	})
+	}, nil)
 	if err != nil {
 		return 0
 	}

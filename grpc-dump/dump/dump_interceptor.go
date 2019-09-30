@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"io"
 	"strings"
@@ -37,6 +38,8 @@ func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_
 			Metadata: md,
 		}
 
+		p, _ := peer.FromContext(ss.Context())
+		p.Addr
 		var err error
 		for _, message := range rpc.Messages {
 			message.Message, err = decoder.Decode(info.FullMethod, message)

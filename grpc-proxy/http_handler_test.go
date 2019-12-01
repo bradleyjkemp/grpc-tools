@@ -2,12 +2,13 @@ package grpc_proxy
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (

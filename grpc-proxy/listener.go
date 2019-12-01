@@ -1,9 +1,10 @@
 package grpc_proxy
 
 import (
-	"github.com/sirupsen/logrus"
 	"net"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 type proxiedConn struct {

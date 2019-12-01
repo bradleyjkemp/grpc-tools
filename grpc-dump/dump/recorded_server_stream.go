@@ -1,17 +1,43 @@
 package dump
 
 import (
-	"github.com/bradleyjkemp/grpc-tools/internal"
-	"google.golang.org/grpc"
 	"sync"
 	"time"
+
+	"github.com/bradleyjkemp/grpc-tools/internal"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // recordedServerStream wraps a grpc.ServerStream and allows the dump interceptor to record all sent/received messages
 type recordedServerStream struct {
 	sync.Mutex
 	grpc.ServerStream
-	events []*internal.Message
+	events   []*internal.Message
+	headers  metadata.MD
+	trailers metadata.MD
+}
+
+func (ss *recordedServerStream) SendHeader(headers metadata.MD) error {
+	ss.Lock()
+	ss.headers = metadata.Join(ss.headers, headers)
+	ss.Unlock()
+	return ss.ServerStream.SendHeader(headers)
+}
+
+func (ss *recordedServerStream) SetHeader(headers metadata.MD) error {
+	ss.Lock()
+	ss.headers = metadata.Join(ss.headers, headers)
+	ss.Unlock()
+	return ss.ServerStream.SetHeader(headers)
+}
+
+func (ss *recordedServerStream) SetTrailer(trailers metadata.MD) {
+	ss.Lock()
+	ss.trailers = trailers
+	ss.Unlock()
+	ss.ServerStream.SetTrailer(trailers)
 }
 
 func (ss *recordedServerStream) SendMsg(m interface{}) error {

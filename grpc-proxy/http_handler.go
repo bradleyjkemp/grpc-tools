@@ -2,14 +2,16 @@ package grpc_proxy
 
 import (
 	"fmt"
-	"github.com/bradleyjkemp/grpc-tools/internal/marker"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"strings"
+
+	"github.com/bradleyjkemp/grpc-tools/internal/marker"
+
+	"github.com/sirupsen/logrus"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 type grpcWebServer interface {

@@ -13,7 +13,7 @@ jobs:
 
   unit-tests:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - run: go test -race -cover -coverprofile=unit-coverage.out ./...
@@ -23,7 +23,7 @@ jobs:
 
   integration-tests:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - run: go run github.com/FiloSottile/mkcert -install
@@ -35,7 +35,7 @@ jobs:
 
   release:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - run: curl -sL https://git.io/goreleaser | bash

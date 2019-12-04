@@ -13,8 +13,8 @@ type RPC struct {
 	Messages             []*Message  `json:"messages"`
 	Status               *Status     `json:"error,omitempty"`
 	Metadata             metadata.MD `json:"metadata"`
-	MetadataRespHeaders  metadata.MD `json:"metadata_resp_headers"`
-	MetadataRespTrailers metadata.MD `json:"metadata_resp_trailers"`
+	MetadataRespHeaders  metadata.MD `json:"metadata_response_headers"`
+	MetadataRespTrailers metadata.MD `json:"metadata_response_trailers"`
 }
 
 type Status struct {

@@ -2,16 +2,19 @@ package internal
 
 import (
 	"fmt"
-	"google.golang.org/grpc/metadata"
 	"time"
+
+	"google.golang.org/grpc/metadata"
 )
 
 type RPC struct {
-	Service  string      `json:"service"`
-	Method   string      `json:"method"`
-	Messages []*Message  `json:"messages"`
-	Status   *Status     `json:"error,omitempty"`
-	Metadata metadata.MD `json:"metadata"`
+	Service              string      `json:"service"`
+	Method               string      `json:"method"`
+	Messages             []*Message  `json:"messages"`
+	Status               *Status     `json:"error,omitempty"`
+	Metadata             metadata.MD `json:"metadata"`
+	MetadataRespHeaders  metadata.MD `json:"metadata_response_headers"`
+	MetadataRespTrailers metadata.MD `json:"metadata_response_trailers"`
 }
 
 type Status struct {

@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.2.4](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.4)
+* Added a new command-line option, `--tls_secrets_file`, to write the [TLS master secrets file](https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format) to the specified path. This can be used later with different application, such as Wireshark, to decrypt the gRPC traffic  [#63](https://github.com/bradleyjkemp/grpc-tools/pull/63).
+* (Issue [#43](https://github.com/bradleyjkemp/grpc-tools/issues/43)) Dumping response header and trailer metadata [#63](https://github.com/bradleyjkemp/grpc-tools/pull/63).
+* Fixed bug where HTTP/2 traffic was not intercepted correctly  [#63](https://github.com/bradleyjkemp/grpc-tools/pull/63).
+* Some linter recommendations [#63](https://github.com/bradleyjkemp/grpc-tools/pull/63).
+
 ## [v0.2.3](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.3)
 * Added a defer-recover handler so that any panics in the `grpc-proxy` interceptor do not kill the proxy [#53](https://github.com/bradleyjkemp/grpc-tools/pull/53).
 * Added a new command-line option, `--system_proxy`, to automatically enable grpc-dump/grpc-fixture as the system proxy on MacOS [#55](https://github.com/bradleyjkemp/grpc-tools/pull/55).

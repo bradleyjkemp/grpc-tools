@@ -3,6 +3,10 @@ package grpc_proxy
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/marker"
 	"google.golang.org/grpc"
@@ -10,9 +14,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"io"
-	"os"
-	"strings"
 )
 
 var proxyStreamDesc = &grpc.StreamDesc{
@@ -91,7 +92,7 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 			return nil
 		}
 	}
-	return grpc.Errorf(codes.Internal, "gRPC proxying should never reach this stage.")
+	return status.Errorf(codes.Internal, "gRPC proxying should never reach this stage.")
 }
 
 func (s *server) calculateDestination(md metadata.MD) (string, error) {

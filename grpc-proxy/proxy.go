@@ -5,6 +5,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/codec"
 	"github.com/bradleyjkemp/grpc-tools/internal/detectcert"
@@ -17,10 +23,6 @@ import (
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc"
 	_ "google.golang.org/grpc/encoding/gzip"
-	"net"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 type ContextDialer = func(context.Context, string) (net.Conn, error)
@@ -41,6 +43,8 @@ type server struct {
 	dialer      ContextDialer
 
 	enableSystemProxy bool
+
+	tlsSecretsFile string
 
 	listener net.Listener
 }
@@ -120,7 +124,15 @@ func (s *server) Start() error {
 	httpServer := newHttpServer(s.logger, grpcWebHandler, proxyLis.internalRedirect, httpReverseProxy)
 	httpsServer := withHttpsMiddleware(newHttpServer(s.logger, grpcWebHandler, proxyLis.internalRedirect, httpReverseProxy))
 
-	httpLis, httpsLis := tlsmux.New(s.logger, proxyLis, s.x509Cert, s.tlsCert)
+	// Use file path for Master Secrets file is specified. Send to /dev/null if not.
+	keyLogWriter := ioutil.Discard
+	if s.tlsSecretsFile != "" {
+		keyLogWriter, err = os.OpenFile(s.tlsSecretsFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+		if err != nil {
+			return fmt.Errorf("failed opening secrets file on path: %s", s.tlsSecretsFile)
+		}
+	}
+	httpLis, httpsLis := tlsmux.New(s.logger, proxyLis, s.x509Cert, s.tlsCert, keyLogWriter)
 
 	errChan := make(chan error)
 	if s.enableSystemProxy {

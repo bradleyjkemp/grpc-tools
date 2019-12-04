@@ -4,10 +4,11 @@ orbs:
 jobs:
   check-dependencies:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - run: go mod verify
+      - run: git diff
       - run: git diff --quiet && echo "Working directory clean" || (echo "Working directory not clean"; exit 1)
 
   unit-tests:

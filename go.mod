@@ -11,7 +11,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/stretchr/testify v1.2.2
+	github.com/stretchr/testify v1.4.0
 	golang.org/x/net v0.0.0-20191126235420-ef20fe5d7933
 	google.golang.org/grpc v1.25.1
 )

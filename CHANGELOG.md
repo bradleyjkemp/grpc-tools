@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased changes
+* Added grpc-proxy options `WithServerOptions` and `WithDialOptions`, deprecated `WithOptions` [#71](https://github.com/bradleyjkemp/grpc-tools/pull/71).
+
 ## [v0.2.4](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.4)
 * Added a new command-line option, `--tls_secrets_file`, to write the [TLS master secrets file](https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format) to the specified path. This can be used later with different application, such as Wireshark, to decrypt the gRPC traffic  [#63](https://github.com/bradleyjkemp/grpc-tools/pull/63).
 * (Issue [#43](https://github.com/bradleyjkemp/grpc-tools/issues/43)) Dumping response header and trailer metadata [#63](https://github.com/bradleyjkemp/grpc-tools/pull/63).

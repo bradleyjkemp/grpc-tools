@@ -12,9 +12,26 @@ import (
 
 type Configurator func(*server)
 
+// Deprecated: use WithServerOptions instead
 func WithOptions(options ...grpc.ServerOption) Configurator {
 	return func(s *server) {
 		s.serverOptions = append(s.serverOptions, options...)
+	}
+}
+
+// WithServerOptions allows you to supply a list of grpc.ServerOption
+// that will be passed to grpc.NewServer when creating the proxy.
+func WithServerOptions(options ...grpc.ServerOption) Configurator {
+	return func(s *server) {
+		s.serverOptions = append(s.serverOptions, options...)
+	}
+}
+
+// WithDialOptions allows you to supply a list of grpc.DialOption
+// that will be passed to grpc.Dial when dialing downstream servers.
+func WithDialOptions(options ...grpc.DialOption) Configurator {
+	return func(s *server) {
+		s.dialOptions = append(s.dialOptions, options...)
 	}
 }
 

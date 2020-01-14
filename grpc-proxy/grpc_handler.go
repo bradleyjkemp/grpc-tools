@@ -28,10 +28,10 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 		return status.Error(codes.Unknown, "could not extract metadata from request")
 	}
 
-	options := []grpc.DialOption{
+	options := append(s.dialOptions,
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NoopCodec{})),
 		grpc.WithBlock(),
-	}
+	)
 	if marker.IsTLSRPC(md) {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
 	} else {

@@ -40,6 +40,7 @@ type server struct {
 
 	destination string
 	connPool    *internal.ConnPool
+	dialOptions []grpc.DialOption
 	dialer      ContextDialer
 
 	enableSystemProxy bool

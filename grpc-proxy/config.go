@@ -73,6 +73,7 @@ func WithDialer(dialer ContextDialer) Configurator {
 }
 
 var (
+	fNetworkInterface  string
 	fPort              int
 	fCertFile          string
 	fKeyFile           string
@@ -84,6 +85,7 @@ var (
 
 // Must be called before flag.Parse() if using the DefaultFlags option
 func RegisterDefaultFlags() {
+	flag.StringVar(&fNetworkInterface, "interface", "localhost", "Network interface to listen on. By default listens on the localhost interface.")
 	flag.IntVar(&fPort, "port", 0, "Port to listen on.")
 	flag.StringVar(&fCertFile, "cert", "", "Certificate file to use for serving using TLS. By default the current directory will be scanned for mkcert certificates to use.")
 	flag.StringVar(&fKeyFile, "key", "", "Key file to use for serving using TLS. By default the current directory will be scanned for mkcert keys to use.")
@@ -96,6 +98,7 @@ func RegisterDefaultFlags() {
 // This must be used after a call to flag.Parse()
 func DefaultFlags() Configurator {
 	return func(s *server) {
+		s.networkInterface = fNetworkInterface
 		s.port = fPort
 		s.certFile = fCertFile
 		s.keyFile = fKeyFile

@@ -54,8 +54,9 @@ type server struct {
 func New(configurators ...Configurator) (*server, error) {
 	logger := logrus.New()
 	s := &server{
-		logger: logger,
-		dialer: proxydialer.NewProxyDialer(httpproxy.FromEnvironment().ProxyFunc()),
+		logger:           logger,
+		dialer:           proxydialer.NewProxyDialer(httpproxy.FromEnvironment().ProxyFunc()),
+		networkInterface: "localhost", // default to just localhost if no other interface is chosen
 	}
 	s.serverOptions = []grpc.ServerOption{
 		grpc.CustomCodec(codec.NoopCodec{}),        // Allows for passing raw []byte messages around

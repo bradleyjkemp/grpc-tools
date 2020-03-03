@@ -32,11 +32,12 @@ type server struct {
 	grpcServer    *grpc.Server
 	logger        logrus.FieldLogger
 
-	port     int
-	certFile string
-	keyFile  string
-	x509Cert *x509.Certificate
-	tlsCert  tls.Certificate
+	networkInterface string
+	port             int
+	certFile         string
+	keyFile          string
+	x509Cert         *x509.Certificate
+	tlsCert          tls.Certificate
 
 	destination string
 	connPool    *internal.ConnPool
@@ -103,9 +104,9 @@ func New(configurators ...Configurator) (*server, error) {
 
 func (s *server) Start() error {
 	var err error
-	s.listener, err = net.Listen("tcp", fmt.Sprintf("localhost:%d", s.port))
+	s.listener, err = net.Listen("tcp", fmt.Sprintf("%s:%d", s.networkInterface, s.port))
 	if err != nil {
-		return fmt.Errorf("failed to listen on port (%d): %v", s.port, err)
+		return fmt.Errorf("failed to listen on interface (%s:%d): %v", s.networkInterface, s.port, err)
 	}
 	s.logger.Infof("Listening on %s", s.listener.Addr())
 	if s.x509Cert != nil {

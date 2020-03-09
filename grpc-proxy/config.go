@@ -1,6 +1,7 @@
 package grpc_proxy
 
 import (
+	"context"
 	"flag"
 	"runtime/debug"
 
@@ -37,11 +38,17 @@ func WithDialOptions(options ...grpc.DialOption) Configurator {
 
 func WithInterceptor(interceptor grpc.StreamServerInterceptor) Configurator {
 	return func(s *server) {
-		s.serverOptions = append(s.serverOptions, grpc.StreamInterceptor(recoverWrapper(s, interceptor)))
+		s.serverOptions = append(s.serverOptions, grpc.StreamInterceptor(streamRecoverWrapper(s, interceptor)))
 	}
 }
 
-func recoverWrapper(s *server, interceptor grpc.StreamServerInterceptor) grpc.StreamServerInterceptor {
+func WithUnaryInterceptor(interceptor grpc.UnaryServerInterceptor) Configurator {
+	return func(s *server) {
+		s.serverOptions = append(s.serverOptions, grpc.UnaryInterceptor(unaryRecoverWrapper(s, interceptor)))
+	}
+}
+
+func streamRecoverWrapper(s *server, interceptor grpc.StreamServerInterceptor) grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -50,6 +57,17 @@ func recoverWrapper(s *server, interceptor grpc.StreamServerInterceptor) grpc.St
 			}
 		}()
 		return interceptor(srv, ss, info, handler)
+	}
+}
+func unaryRecoverWrapper(s *server, interceptor grpc.UnaryServerInterceptor) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = status.Errorf(codes.Internal, "proxy error: %v", r)
+				s.logger.WithError(err).Warn("panic in UnaryHandler: ", string(debug.Stack()))
+			}
+		}()
+		return interceptor(ctx, req, info, handler)
 	}
 }
 

@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/bradleyjkemp/cupaloy/v2 v2.5.0
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
-	github.com/golang/protobuf v1.3.4
+	github.com/golang/protobuf v1.3.5
 	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/improbable-eng/grpc-web v0.12.0
 	github.com/jhump/protoreflect v1.6.0

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/bradleyjkemp/grpc-tools/internal/proto_decoder"
@@ -20,7 +19,6 @@ import (
 )
 
 // dump interceptor implements a gRPC.StreamingServerInterceptor that dumps all RPC details
-var mu sync.Mutex
 
 type pbm struct {
 	*dynamic.Message

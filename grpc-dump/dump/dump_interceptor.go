@@ -58,6 +58,7 @@ func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_
 		fullMethod := strings.Split(info.FullMethod, "/")
 		md, _ := metadata.FromIncomingContext(ss.Context())
 		dss.Lock()
+		defer dss.Unlock()
 		rpc := internal.RPC{
 			Service:              fullMethod[1],
 			Method:               fullMethod[2],

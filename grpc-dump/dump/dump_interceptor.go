@@ -80,7 +80,6 @@ func dumpInterceptor(logger logrus.FieldLogger, output io.Writer, decoder proto_
 			logger.WithError(err).Fatal("Failed to marshal rpc")
 		}
 		fmt.Fprintln(output, string(dump))
-		dss.Unlock()
 		return rpcErr
 	}
 }

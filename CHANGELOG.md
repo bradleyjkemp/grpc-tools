@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## [v0.2.6](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.6)
 * Fixed a bug that prevented replaying empty gRPC messages [#105](https://github.com/bradleyjkemp/grpc-tools/pull/105).
+* Fixed a bug that prevented google.protobuf.Any fields being dumped [#96](https://github.com/bradleyjkemp/grpc-tools/issues/96).
 
 ## [v0.2.5](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.5)
 * Added grpc-proxy options `WithServerOptions` and `WithDialOptions`, deprecated `WithOptions` [#71](https://github.com/bradleyjkemp/grpc-tools/pull/71).

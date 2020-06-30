@@ -2,10 +2,12 @@ package proto_descriptor
 
 import (
 	"fmt"
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/protoparse"
 	"os"
 	"path/filepath"
+	"sync"
+
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoparse"
 )
 
 func LoadProtoDescriptors(descriptorPaths ...string) (map[string]*desc.MethodDescriptor, error) {
@@ -20,6 +22,13 @@ func LoadProtoDescriptors(descriptorPaths ...string) (map[string]*desc.MethodDes
 
 	return convertDescriptorsToMap(descriptors), nil
 }
+
+type MessageDesc struct {
+	Desc map[string]*desc.MessageDescriptor
+	sync.Mutex
+}
+
+var MsgDesc = MessageDesc{Desc: make(map[string]*desc.MessageDescriptor, 0)}
 
 // recursively walks through all files in the given directories and
 // finds .proto files that contains service definitions
@@ -45,6 +54,14 @@ func LoadProtoDirectories(roots ...string) (map[string]*desc.MethodDescriptor, e
 					fmt.Fprintf(os.Stderr, "Skipping %s due to parse error %s", path, err)
 					return nil
 				}
+				fileDescs, err := parser.ParseFiles(relpath)
+				for _, fileDesc := range fileDescs {
+					for _, mt := range fileDesc.GetMessageTypes() {
+						MsgDesc.Lock()
+						MsgDesc.Desc[mt.GetFullyQualifiedName()] = mt
+						MsgDesc.Unlock()
+					}
+				}
 				if len(descs[0].Service) > 0 {
 					// this file is interesting so
 					fileDesc, err := parser.ParseFiles(relpath)
@@ -53,6 +70,11 @@ func LoadProtoDirectories(roots ...string) (map[string]*desc.MethodDescriptor, e
 						return nil
 					}
 					servicesFiles = append(servicesFiles, fileDesc[0])
+					for _, smt := range fileDesc[0].GetMessageTypes() {
+						MsgDesc.Lock()
+						MsgDesc.Desc[smt.GetFullyQualifiedName()] = smt
+						MsgDesc.Unlock()
+					}
 				}
 			}
 			return nil

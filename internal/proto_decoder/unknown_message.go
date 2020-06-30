@@ -2,6 +2,8 @@ package proto_decoder
 
 import (
 	"fmt"
+	"regexp"
+
 	"github.com/bradleyjkemp/grpc-tools/internal"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -9,7 +11,6 @@ import (
 	"github.com/jhump/protoreflect/desc/builder"
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/pkg/errors"
-	"regexp"
 )
 
 // When we don't have an actual proto message descriptor, this takes a best effort
@@ -109,6 +110,9 @@ func (u *unknownFieldResolver) enrichMessage(descriptor *builder.MessageBuilder,
 		dynamicNestedMessage, err := dynamic.AsDynamicMessage(nestedMessage)
 		if err != nil {
 			return errors.Wrap(err, "failed to convert nested message to dynamic")
+		}
+		if dynamicNestedMessage == nil {
+			return nil
 		}
 
 		err = u.enrichMessage(nestedMessageDescriptor, dynamicNestedMessage)

@@ -42,6 +42,10 @@ func (ss *recordedServerStream) SetTrailer(trailers metadata.MD) {
 
 func (ss *recordedServerStream) SendMsg(m interface{}) error {
 	message := m.([]byte)
+	if message == nil {
+		// although the message is nil here, we actually want to save it as the empty message ("")
+		message = []byte{}
+	}
 	ss.Lock()
 	ss.events = append(ss.events, &internal.Message{
 		MessageOrigin: internal.ServerMessage,

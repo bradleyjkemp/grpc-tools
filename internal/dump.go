@@ -35,7 +35,7 @@ const (
 
 type Message struct {
 	MessageOrigin MessageOrigin `json:"message_origin,omitempty"`
-	RawMessage    []byte        `json:"raw_message,omitempty"`
+	RawMessage    []byte        `json:"raw_message"`
 	Message       interface{}   `json:"message,omitempty"`
 	Timestamp     time.Time     `json:"timestamp"`
 }

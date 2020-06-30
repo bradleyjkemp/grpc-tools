@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* Fixed a bug that prevented replaying empty gRPC messages [#105](https://github.com/bradleyjkemp/grpc-tools/pull/105).
+
 ## [v0.2.5](https://github.com/bradleyjkemp/grpc-tools/releases/tag/v0.2.5)
 * Added grpc-proxy options `WithServerOptions` and `WithDialOptions`, deprecated `WithOptions` [#71](https://github.com/bradleyjkemp/grpc-tools/pull/71).
 * Added a new command-line option, `--interface` to allow choosing which network interface `grpc-proxy` listens on [#81](https://github.com/bradleyjkemp/grpc-tools/pull/81).

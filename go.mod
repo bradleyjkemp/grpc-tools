@@ -3,7 +3,7 @@ module github.com/bradleyjkemp/grpc-tools
 go 1.13
 
 require (
-	github.com/bradleyjkemp/cupaloy/v2 v2.5.0
+	github.com/bradleyjkemp/cupaloy/v2 v2.6.0
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/websocket v1.4.1 // indirect

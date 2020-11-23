@@ -8,7 +8,7 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/improbable-eng/grpc-web v0.13.0
-	github.com/jhump/protoreflect v1.7.0
+	github.com/jhump/protoreflect v1.7.1
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.7.0 // indirect

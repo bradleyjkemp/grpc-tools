@@ -59,6 +59,7 @@ func New(configurators ...Configurator) (*server, error) {
 		networkInterface: "localhost", // default to just localhost if no other interface is chosen
 	}
 	s.serverOptions = []grpc.ServerOption{
+		grpc.MaxRecvMsgSize(64 * 1024 * 1024),      // Up the max message size from 4MB to 64MB (to give headroom for intercepting services who've upped theirs)
 		grpc.CustomCodec(codec.NoopCodec{}),        // Allows for passing raw []byte messages around
 		grpc.UnknownServiceHandler(s.proxyHandler), // All services are unknown so will be proxied
 	}

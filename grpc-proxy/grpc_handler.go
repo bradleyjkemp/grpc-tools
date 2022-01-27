@@ -32,7 +32,7 @@ func (s *server) proxyHandler(srv interface{}, ss grpc.ServerStream) error {
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NoopCodec{})),
 		grpc.WithBlock(),
 	)
-	if marker.IsTLSRPC(md) {
+	if marker.IsTLSRPC(md) || s.forceTLSDestination {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
 	} else {
 		options = append(options, grpc.WithInsecure())

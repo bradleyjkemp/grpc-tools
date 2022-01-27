@@ -73,14 +73,15 @@ func WithDialer(dialer ContextDialer) Configurator {
 }
 
 var (
-	fNetworkInterface  string
-	fPort              int
-	fCertFile          string
-	fKeyFile           string
-	fDestination       string
-	fLogLevel          string
-	fEnableSystemProxy bool
-	fTLSSecretsFile    string
+	fNetworkInterface    string
+	fPort                int
+	fCertFile            string
+	fKeyFile             string
+	fDestination         string
+	fLogLevel            string
+	fEnableSystemProxy   bool
+	fTLSSecretsFile      string
+	fForceTLSDestination bool
 )
 
 // Must be called before flag.Parse() if using the DefaultFlags option
@@ -93,6 +94,7 @@ func RegisterDefaultFlags() {
 	flag.StringVar(&fLogLevel, "log_level", logrus.InfoLevel.String(), "Set the log level that grpc-proxy will log at. Values are {error, warning, info, debug}")
 	flag.BoolVar(&fEnableSystemProxy, "system_proxy", false, "Automatically configure system to use this as the proxy for all connections.")
 	flag.StringVar(&fTLSSecretsFile, "tls_secrets_file", "", "Secrets file to write the TLS master secrets in order to decrypt TLS traffic with different tools such as Wireshark.")
+	flag.BoolVar(&fForceTLSDestination, "force_tls_destination", false, "Automatically configure system to use TLS for the destination (even if the source doesn't)")
 }
 
 // This must be used after a call to flag.Parse()
@@ -105,5 +107,6 @@ func DefaultFlags() Configurator {
 		s.destination = fDestination
 		s.enableSystemProxy = fEnableSystemProxy
 		s.tlsSecretsFile = fTLSSecretsFile
+		s.forceTLSDestination = fForceTLSDestination
 	}
 }

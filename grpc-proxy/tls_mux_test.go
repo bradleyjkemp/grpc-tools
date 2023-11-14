@@ -3,7 +3,6 @@ package grpc_proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -26,7 +25,7 @@ func TestTLSMux_HTTP2Support(t *testing.T) {
 	// New logger.
 	logger := logrus.New()
 	// New proxy listener.
-	ln, err := net.Listen("tcp", fmt.Sprintf("localhost:0"))
+	ln, err := net.Listen("tcp", "localhost:0")
 	listenerPort := ln.Addr().(*net.TCPAddr).Port
 	require.NoErrorf(t, err, "failed creating tcp listener on port %d", listenerPort)
 	proxyLis := newProxyListener(logger, ln)

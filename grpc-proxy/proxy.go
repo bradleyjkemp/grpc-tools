@@ -44,7 +44,8 @@ type server struct {
 	dialOptions []grpc.DialOption
 	dialer      ContextDialer
 
-	enableSystemProxy bool
+	enableSystemProxy    bool
+	forceTLSDestination  bool
 
 	tlsSecretsFile string
 
